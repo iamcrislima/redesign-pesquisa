@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   PHS · Sistema de Pesquisa Recorrente 1Doc
+   Tokens UMDS (claro) para a pesquisa pública
+   Tema escuro alto contraste para o painel interno
+   ============================================================ */
+:root{
+  /* --- UMDS / 1Doc --- */
+  --primary:#0058db;
+  --primary-ink:#00409e;
+  --primary-wash:#e8f0fd;
+  --bg:#f4f6f9;
+  --surface:#ffffff;
+  --surface-2:#fafbfc;
+  --border:#dde3ea;
+  --border-strong:#c3ccd8;
+  --ink:#16202e;
+  --ink-soft:#5a6a7d;
+  --ink-faint:#8b98a8;
+  --pos:#0a7f57;
+  --pos-wash:#e6f5ef;
+  --neg:#c1301a;
+  --neg-wash:#fdeceb;
+  --warn:#a86a05;
+  --warn-wash:#fdf3e2;
+  --r-btn:6px;
+  --r-card:10px;
+  --shadow-card:0 1px 2px rgba(22,32,46,.05), 0 8px 24px -12px rgba(22,32,46,.12);
+  --shadow-pop:0 12px 40px -12px rgba(22,32,46,.28);
+
+  /* --- painel escuro --- */
+  --d-bg:#0c1119;
+  --d-surface:#141b26;
+  --d-surface-2:#1b2430;
+  --d-border:#26313f;
+  --d-border-2:#334252;
+  --d-ink:#eef3f9;
+  --d-ink-soft:#93a3b6;
+  --d-ink-faint:#647689;
+  --d-primary:#4d8dff;
+  --d-primary-wash:#132340;
+  --d-pos:#2fd18a;
+  --d-neg:#ff6f56;
+  --d-warn:#f2b544;
+
+  --sans:'Open Sans','Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--sans);background:transparent;color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:3px}
+.dark :focus-visible{outline-color:var(--d-primary)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.app{min-height:100vh}
+.mono{font-family:var(--mono);font-variant-ligatures:none}
+.hide{display:none!important}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+
+/* ========== SHELL PESQUISA ========== */
+.pub{background:var(--bg);min-height:100vh;display:flex;flex-direction:column}
+.pub-top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.pub-top-in{max-width:1120px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:-.01em;flex-shrink:0}
+.brand-mark{width:26px;height:26px;border-radius:var(--r-btn);background:var(--primary);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;letter-spacing:-.03em}
+.brand-sub{color:var(--ink-faint);font-weight:400;font-size:13px;border-left:1px solid var(--border);padding-left:10px;margin-left:2px}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+.proto-chip{font-family:var(--mono);font-size:12px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--border);border-radius:var(--r-btn);padding:4px 9px;white-space:nowrap}
+.pub-progress{height:3px;background:var(--border);position:relative;overflow:hidden}
+.pub-progress i{position:absolute;inset:0 auto 0 0;background:var(--primary);width:0;transition:width .5s cubic-bezier(.2,.7,.2,1)}
+
+.pub-body{flex:1;max-width:1120px;width:100%;margin:0 auto;padding:34px 24px 90px;display:grid;grid-template-columns:232px 1fr;gap:44px;align-items:start}
+.pub-body>*{min-width:0}
+.trail-compact{display:none}
+
+/* --- trilha de tramitação (assinatura) --- */
+.trail{position:sticky;top:96px}
+.trail-h{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:6px}
+.tr-item{display:grid;grid-template-columns:22px 1fr;gap:11px;padding:9px 0;position:relative}
+.tr-item::before{content:'';position:absolute;left:10.5px;top:26px;bottom:-9px;width:1px;background:var(--border)}
+.tr-item:last-child::before{display:none}
+.tr-item.done::before{background:var(--primary)}
+.tr-dot{width:21px;height:21px;border-radius:50%;border:1.5px solid var(--border-strong);background:var(--surface);display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--ink-faint);z-index:1;transition:all .3s}
+.tr-item.done .tr-dot{background:var(--primary);border-color:var(--primary);color:#fff}
+.tr-item.now .tr-dot{border-color:var(--primary);color:var(--primary);box-shadow:0 0 0 4px var(--primary-wash)}
+.tr-name{font-size:13.5px;font-weight:600;color:var(--ink-faint);line-height:1.35;transition:color .2s}
+.tr-item.done .tr-name,.tr-item.now .tr-name{color:var(--ink)}
+.tr-stamp{font-family:var(--mono);font-size:10.5px;color:var(--pos);letter-spacing:.02em;margin-top:2px}
+.tr-item.now .tr-stamp{color:var(--primary)}
+
+/* --- cartão de pergunta --- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);box-shadow:var(--shadow-card);padding:38px 40px}
+.enter>.card,.enter>.receipt{animation:cardIn .38s cubic-bezier(.2,.7,.2,1)}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.card-eyebrow b{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--primary);background:var(--primary-wash);padding:3px 7px;border-radius:4px}
+.q{font-size:25px;font-weight:700;letter-spacing:-.022em;line-height:1.26;margin-bottom:10px;max-width:30ch}
+.q-help{font-size:14.5px;color:var(--ink-soft);margin-bottom:26px;max-width:58ch}
+.q-core{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);border:1px dashed var(--border-strong);padding:2px 6px;border-radius:4px}
+.fields{display:flex;flex-direction:column;gap:24px}
+.f-label{display:block;font-size:13.5px;font-weight:600;margin-bottom:8px}
+.f-label span{font-weight:400;color:var(--ink-faint)}
+.inp,select.inp{width:100%;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-btn);padding:11px 13px;font-size:14.5px;transition:border-color .15s,box-shadow .15s}
+.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-wash);outline:none}
+textarea.inp{min-height:112px;resize:vertical;line-height:1.6}
+.charc{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-align:right;margin-top:6px}
+
+/* opções */
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--border-strong);border-radius:var(--r-btn);cursor:pointer;background:var(--surface);text-align:left;transition:all .15s;font-size:14.5px;width:100%}
+.opt:hover{border-color:var(--primary);background:var(--surface-2)}
+.opt.on{border-color:var(--primary);background:var(--primary-wash);box-shadow:inset 0 0 0 1px var(--primary)}
+.opt-box{width:18px;height:18px;border:1.5px solid var(--border-strong);border-radius:4px;display:grid;place-items:center;flex-shrink:0;color:transparent;font-size:11px;font-weight:700}
+.opt-box.round{border-radius:50%}
+.opt.on .opt-box{background:var(--primary);border-color:var(--primary);color:#fff}
+.opt b{font-weight:600}
+.opt small{display:block;color:var(--ink-soft);font-size:12.5px;font-weight:400;margin-top:1px}
+.opts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:9px}
+
+/* NPS */
+.nps{display:grid;grid-template-columns:repeat(11,1fr);gap:6px}
+.nps button{aspect-ratio:1;border:1px solid var(--border-strong);border-radius:var(--r-btn);background:var(--surface);font-family:var(--mono);font-size:15px;font-weight:500;cursor:pointer;transition:all .13s}
+.nps button:hover{border-color:var(--primary);transform:translateY(-2px)}
+.nps button.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600;transform:translateY(-2px);box-shadow:0 4px 12px -4px rgba(0,88,219,.5)}
+.scale-ends{display:flex;justify-content:space-between;margin-top:9px;font-size:12px;color:var(--ink-faint)}
+
+/* escala 1-7 */
+.lik{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.lik button{padding:13px 0;border:1px solid var(--border-strong);border-radius:var(--r-btn);background:var(--surface);font-family:var(--mono);font-size:14px;cursor:pointer;transition:all .13s}
+.lik button:hover{border-color:var(--primary)}
+.lik button.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.lik-row{padding:19px 0;border-bottom:1px solid var(--border)}
+.lik-row:last-child{border-bottom:none;padding-bottom:2px}
+.lik-row-h{display:flex;align-items:baseline;gap:9px;margin-bottom:11px}
+.lik-row-h b{font-size:14.5px;font-weight:600}
+.lik-row-h span{font-size:12.5px;color:var(--ink-faint)}
+
+/* botões */
+.actions{display:flex;align-items:center;gap:12px;margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+.btn{border:1px solid transparent;border-radius:var(--r-btn);padding:11px 20px;font-size:14.5px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
+.btn-pri{background:var(--primary);color:#fff}
+.btn-pri:hover{background:var(--primary-ink)}
+.btn-pri:disabled{background:var(--border);color:var(--ink-faint);cursor:not-allowed}
+.btn-gho{background:transparent;color:var(--ink-soft);border-color:var(--border-strong)}
+.btn-gho:hover{border-color:var(--ink-soft);color:var(--ink)}
+.btn-txt{background:none;color:var(--ink-soft);border:none;padding:11px 4px}
+.btn-txt:hover{color:var(--primary)}
+.act-note{margin-left:auto;font-size:12.5px;color:var(--ink-faint)}
+.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--ink-soft);background:var(--surface-2)}
+
+/* abertura */
+.open-hero{display:flex;flex-direction:column;gap:22px}
+.open-title{font-size:38px;font-weight:700;letter-spacing:-.032em;line-height:1.1;max-width:22ch}
+.open-title em{font-style:normal;color:var(--primary)}
+.open-lead{font-size:16px;color:var(--ink-soft);max-width:56ch;line-height:1.62}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r-card);overflow:hidden;margin:6px 0}
+.fact{background:var(--surface);padding:16px 18px}
+.fact b{display:block;font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.fact span{font-size:12.5px;color:var(--ink-faint)}
+.callout{background:var(--primary-wash);border:1px solid #c4dafb;border-left:3px solid var(--primary);border-radius:var(--r-btn);padding:15px 17px;font-size:14px;line-height:1.6}
+.callout b{font-weight:700}
+
+/* comprovante */
+.receipt{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);box-shadow:var(--shadow-card);overflow:hidden}
+.rec-top{background:var(--primary);color:#fff;padding:26px 34px}
+.rec-top .eyebrow{color:#a8c8f7}
+.rec-top h2{font-size:26px;font-weight:700;letter-spacing:-.025em;margin:7px 0 5px}
+.rec-top p{font-size:14px;color:#cfe0fb;max-width:52ch}
+.rec-body{padding:28px 34px 32px}
+.rec-line{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px dashed var(--border);font-size:14px}
+.rec-line:last-of-type{border-bottom:none}
+.rec-line span{color:var(--ink-soft)}
+.rec-line b{font-family:var(--mono);font-weight:600;text-align:right}
+.badge-lv{display:inline-flex;align-items:center;gap:9px;background:var(--warn-wash);border:1px solid #f0d9a8;border-radius:999px;padding:6px 14px 6px 8px;font-size:13.5px;font-weight:600;color:#7a4d02;margin:20px 0 6px}
+.badge-lv i{width:24px;height:24px;border-radius:50%;background:var(--warn);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600;font-style:normal}
+.steps-next{margin-top:22px;border-top:1px solid var(--border);padding-top:22px}
+.sn{display:grid;grid-template-columns:22px 1fr;gap:12px;padding:8px 0;font-size:14px;color:var(--ink-soft)}
+.sn i{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-wash);border-radius:4px;display:grid;place-items:center;font-style:normal;height:20px;margin-top:1px}
+
+.warn-bar{background:var(--warn-wash);border-bottom:1px solid #f0d9a8;color:#6b4302;font-size:12.5px;padding:8px 24px;text-align:center}
+.dark .warn-bar{background:#2a2005;border-color:#4a3a0d;color:var(--d-warn)}
+
+/* ========== PAINEL ESCURO ========== */
+.dark{background:var(--d-bg);color:var(--d-ink);min-height:100vh}
+.dk-top{background:var(--d-surface);border-bottom:1px solid var(--d-border);position:sticky;top:0;z-index:20}
+.dk-top-in{max-width:1360px;margin:0 auto;padding:0 26px;height:58px;display:flex;align-items:center;gap:16px}
+.dark .brand-mark{background:var(--d-primary);color:#06101f}
+.dark .brand-sub{color:var(--d-ink-faint);border-color:var(--d-border)}
+.dk-body{max-width:1360px;margin:0 auto;padding:26px 26px 80px}
+.dk-sel{background:var(--d-surface-2);border:1px solid var(--d-border-2);border-radius:var(--r-btn);color:var(--d-ink);padding:7px 11px;font-size:13px;font-family:var(--mono)}
+.dk-btn{background:var(--d-surface-2);border:1px solid var(--d-border-2);color:var(--d-ink-soft);border-radius:var(--r-btn);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.dk-btn:hover{border-color:var(--d-primary);color:var(--d-ink)}
+.dk-btn.pri{background:var(--d-primary);color:#06101f;border-color:var(--d-primary)}
+.dk-btn.pri:hover{filter:brightness(1.12)}
+.dk-btn:disabled{opacity:.45;cursor:not-allowed}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:14px}
+.kpi{background:var(--d-surface);border:1px solid var(--d-border);border-radius:var(--r-card);padding:19px 21px;position:relative;overflow:hidden}
+.kpi.hero{background:linear-gradient(155deg,#16233a,var(--d-surface) 62%);border-color:#2b3d59}
+.kpi-l{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--d-ink-faint);display:flex;align-items:center;gap:7px}
+.kpi-v{font-family:var(--mono);font-size:40px;font-weight:600;letter-spacing:-.035em;line-height:1.12;margin:9px 0 3px}
+.kpi.hero .kpi-v{color:var(--d-primary);font-size:46px}
+.kpi-d{font-family:var(--mono);font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px}
+.up{color:var(--d-pos)}.down{color:var(--d-neg)}.flat{color:var(--d-ink-faint)}
+.kpi-n{font-size:12px;color:var(--d-ink-faint);margin-top:7px;line-height:1.45}
+.spark{position:absolute;right:0;bottom:0;opacity:.5}
+
+.grid2{display:grid;grid-template-columns:1.42fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
+.grid2b{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
+.panel{background:var(--d-surface);border:1px solid var(--d-border);border-radius:var(--r-card);padding:21px 23px}
+.panel-h{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.panel-h h3{font-size:15.5px;font-weight:700;letter-spacing:-.015em}
+.panel-h p{font-size:12.5px;color:var(--d-ink-faint);margin-top:3px;line-height:1.45}
+.panel-h .right{margin-left:auto;flex-shrink:0}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:4px;border:1px solid var(--d-border-2);color:var(--d-ink-faint)}
+
+.bars{display:flex;flex-direction:column;gap:13px}
+.bar-row{display:grid;grid-template-columns:1fr;gap:6px}
+.bar-top{display:flex;align-items:baseline;gap:9px;font-size:13.5px}
+.bar-top b{font-weight:600}
+.bar-top .n{margin-left:auto;font-family:var(--mono);font-size:12.5px;color:var(--d-ink-soft)}
+.bar-track{height:7px;background:var(--d-surface-2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:var(--d-primary);width:0;transition:width .9s cubic-bezier(.2,.7,.2,1)}
+.bar-sub{font-size:12px;color:var(--d-ink-faint)}
+.chg{font-family:var(--mono);font-size:11.5px;font-weight:500}
+
+.movers{display:flex;flex-direction:column;gap:10px}
+.mv{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--d-surface-2);border:1px solid var(--d-border);border-radius:var(--r-btn);padding:12px 14px}
+.mv-ar{font-family:var(--mono);font-size:15px;font-weight:600;width:20px;text-align:center}
+.mv b{font-size:13.5px;font-weight:600;display:block}
+.mv span{font-size:12px;color:var(--d-ink-faint)}
+.mv-v{font-family:var(--mono);font-size:14px;font-weight:600;text-align:right}
+
+.cmts{display:flex;flex-direction:column;gap:11px;max-height:430px;overflow-y:auto;padding-right:6px}
+.cmts::-webkit-scrollbar{width:8px}.cmts::-webkit-scrollbar-thumb{background:var(--d-border-2);border-radius:4px}
+.cmt{background:var(--d-surface-2);border:1px solid var(--d-border);border-left:2.5px solid var(--d-border-2);border-radius:var(--r-btn);padding:13px 15px}
+.cmt.det{border-left-color:var(--d-neg)}.cmt.pro{border-left-color:var(--d-pos)}.cmt.neu{border-left-color:var(--d-warn)}
+.cmt-h{display:flex;align-items:center;gap:9px;margin-bottom:7px;flex-wrap:wrap}
+.cmt-h .sc{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--d-bg);border:1px solid var(--d-border-2)}
+.cmt-h .who{font-size:12px;color:var(--d-ink-faint)}
+.cmt p{font-size:13.5px;line-height:1.58;color:#d7e1ec}
+.cmt-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.cmt-tags i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;background:var(--d-primary-wash);color:#9dc0ff;padding:2px 6px;border-radius:3px}
+
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.chip{background:var(--d-surface-2);border:1px solid var(--d-border-2);color:var(--d-ink-soft);border-radius:999px;padding:5px 13px;font-size:12.5px;cursor:pointer;transition:all .15s}
+.chip:hover{color:var(--d-ink)}
+.chip.on{background:var(--d-primary-wash);border-color:var(--d-primary);color:#a9c9ff;font-weight:600}
+
+.q-table{width:100%;border-collapse:collapse;font-size:13px;color:var(--d-ink);font-family:var(--sans)}
+.q-table th{text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--d-ink-faint);font-weight:500;padding:0 12px 10px 0;border-bottom:1px solid var(--d-border)}
+.q-table td{padding:12px 12px 12px 0;border-bottom:1px solid var(--d-border);vertical-align:top}
+.q-table tr:last-child td{border-bottom:none}
+.q-table .nm{font-weight:600}
+.q-table .sub{font-size:11.5px;color:var(--d-ink-faint);margin-top:2px}
+.pill{font-family:var(--mono);font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.pill.det{background:#3a1410;color:var(--d-neg)}
+.pill.neu{background:#332504;color:var(--d-warn)}
+.pill.pro{background:#0c2b1e;color:var(--d-pos)}
+
+.ai-out{background:var(--d-bg);border:1px solid var(--d-border);border-radius:var(--r-btn);padding:16px 18px;margin-top:14px}
+.ai-theme{padding:12px 0;border-bottom:1px solid var(--d-border)}
+.ai-theme:last-child{border-bottom:none;padding-bottom:0}
+.ai-theme .th{display:flex;align-items:baseline;gap:10px}
+.ai-theme .th b{font-size:14px;font-weight:600}
+.ai-theme .th .cnt{font-family:var(--mono);font-size:11.5px;color:var(--d-ink-faint);margin-left:auto}
+.ai-theme p{font-size:13px;color:var(--d-ink-soft);line-height:1.55;margin-top:5px}
+.ai-theme q{font-size:12.5px;color:var(--d-ink-faint);font-style:italic;display:block;margin-top:6px;padding-left:11px;border-left:2px solid var(--d-border-2)}
+
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login{background:var(--d-surface);border:1px solid var(--d-border);border-radius:var(--r-card);padding:34px;width:100%;max-width:395px;box-shadow:0 24px 70px -20px #000}
+.login h2{font-size:21px;font-weight:700;letter-spacing:-.02em;margin:16px 0 6px}
+.login p{font-size:13.5px;color:var(--d-ink-faint);margin-bottom:22px;line-height:1.55}
+.dk-inp{width:100%;background:var(--d-bg);border:1px solid var(--d-border-2);border-radius:var(--r-btn);padding:11px 13px;font-size:14px;color:var(--d-ink);font-family:var(--mono)}
+.dk-inp:focus{border-color:var(--d-primary);outline:none;box-shadow:0 0 0 3px var(--d-primary-wash)}
+.login .err{color:var(--d-neg);font-size:12.5px;margin-top:10px;font-family:var(--mono)}
+.login .hint{font-size:11.5px;color:var(--d-ink-faint);margin-top:16px;padding-top:14px;border-top:1px solid var(--d-border);line-height:1.5;margin-bottom:0}
+
+.empty{text-align:center;padding:44px 20px;color:var(--d-ink-faint)}
+.empty b{display:block;color:var(--d-ink);font-size:15px;margin-bottom:6px}
+.empty p{font-size:13px;max-width:42ch;margin:0 auto 18px;line-height:1.55}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0a1220;border:1px solid var(--d-border-2);color:#eef3f9;border-radius:var(--r-btn);padding:12px 18px;font-size:13.5px;box-shadow:0 16px 44px -12px rgba(0,0,0,.6);z-index:99;animation:cardIn .3s}
+
+svg text{font-family:var(--mono)}
+
+@media (max-width:900px){
+  .pub-body{grid-template-columns:1fr;gap:20px;padding:20px 16px 70px}
+  .trail{position:static}
+  .trail-h,.trail-list{display:none}
+  .trail-compact{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11.5px;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+  .trail-compact b{color:var(--primary);font-weight:600}
+  .trail-compact i{font-style:normal;color:var(--ink);font-family:var(--sans);font-size:13px;
+    font-weight:600;letter-spacing:0;text-transform:none}
+  .card{padding:24px 20px}
+  .q{font-size:21px}
+  .open-title{font-size:28px}
+  .nps{grid-template-columns:repeat(6,1fr)}
+  .lik{grid-template-columns:repeat(7,1fr);gap:4px}
+  .lik button{padding:11px 0;font-size:12.5px}
+  .grid2,.grid2b{grid-template-columns:1fr}
+  .rec-top,.rec-body{padding-left:22px;padding-right:22px}
+  .dk-top-in{height:auto;padding:11px 16px;flex-wrap:wrap;gap:10px}
+  .dk-top-in .top-right{width:100%;margin-left:0;flex-wrap:wrap;gap:8px}
+  .dk-body{padding:18px 16px 70px}
+  .panel{padding:17px 16px}
+  .kpi-v{font-size:33px}.kpi.hero .kpi-v{font-size:37px}
+  .q-table th:nth-child(3),.q-table td:nth-child(3){display:none}
+  .cmts{max-height:none}
+  .pub-top-in{padding:0 16px}
+  .brand-sub{display:none}
+  .actions{flex-wrap:wrap}
+  .act-note{display:none}
+}
+
+/* ---- seletor de cliente com busca ---- */
+.pick-wrap{position:relative}
+.pick-list{max-height:262px;overflow-y:auto;border:1px solid var(--border-strong);border-radius:var(--r-btn);margin-top:9px;background:var(--surface)}
+.pick-list::-webkit-scrollbar{width:9px}.pick-list::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:5px}
+.pick-item{display:flex;align-items:center;gap:11px;padding:11px 14px;cursor:pointer;border:none;border-bottom:1px solid var(--border);font-size:14px;width:100%;background:var(--surface);text-align:left;transition:background .12s}
+.pick-item:last-child{border-bottom:none}
+.pick-item:hover,.pick-item:focus-visible{background:var(--primary-wash)}
+.pick-item .pkind{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--primary);background:var(--primary-wash);padding:2px 6px;border-radius:3px;flex-shrink:0}
+.pick-item .pid{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-faint);flex-shrink:0}
+.pick-none{padding:16px 14px;font-size:13.5px;color:var(--ink-soft);line-height:1.55}
+.pick-sel{display:flex;align-items:center;gap:11px;padding:14px 15px;border:1px solid var(--primary);background:var(--primary-wash);border-radius:var(--r-btn);font-size:15px;font-weight:600;box-shadow:inset 0 0 0 1px var(--primary)}
+.pick-sel .pid{margin-left:auto;font-family:var(--mono);font-size:11.5px;font-weight:500;color:var(--primary-ink)}
+.pick-count{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin-top:8px}
+
+/* ---- matriz redesign vs legado ---- */
+.mx-row{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:center;padding:15px 0;border-bottom:1px solid var(--border)}
+.mx-row:last-child{border-bottom:none}
+.mx-row b{font-size:14.5px;font-weight:600}
+.mx-row small{display:block;font-size:12.5px;color:var(--ink-faint);font-weight:400;margin-top:2px}
+.mx-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mx-opts button{padding:10px 4px;border:1px solid var(--border-strong);border-radius:var(--r-btn);background:var(--surface);font-size:12px;font-weight:600;cursor:pointer;transition:all .13s;line-height:1.25}
+.mx-opts button:hover{border-color:var(--primary)}
+.mx-opts button.on{color:#fff;border-color:transparent}
+.mx-opts button.on.mup{background:var(--pos)}
+.mx-opts button.on.meq{background:var(--ink-soft)}
+.mx-opts button.on.mdn{background:var(--neg)}
+.mx-head{display:grid;grid-template-columns:1fr 300px;gap:18px;padding-bottom:9px}
+.mx-head div:last-child{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
+.mx-head span{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+
+/* ---- aviso de ramo (voltou ao legado) ---- */
+.branch{background:var(--warn-wash);border:1px solid #f0d9a8;border-left:3px solid var(--warn);border-radius:var(--r-btn);padding:15px 17px;font-size:14px;line-height:1.6;margin-bottom:24px}
+.branch b{color:#6b4302}
+
+/* ---- painel: bloco de reversão ---- */
+.rev-hero{background:linear-gradient(155deg,#2d1512,var(--d-surface) 62%);border-color:#4a2420}
+.rev-hero .kpi-v{color:var(--d-neg)}
+.dark .q-table td .why{font-size:12.5px;color:var(--d-ink-soft);line-height:1.5;margin-top:4px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+.legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--d-ink-faint)}
+.legend i{width:9px;height:9px;border-radius:2px;display:block}
+
+@media (max-width:900px){
+  .mx-row,.mx-head{grid-template-columns:1fr;gap:10px}
+  .mx-head{display:none}
+  .mx-opts button{padding:11px 4px;font-size:12px}
+}
+</style>
+
+<div class="app" id="app"></div>
+<script>
+/* ============================================================
+   CARGA DE CLIENTES COM O REDESIGN ATIVO
+   Formato compacto "nome|id" para não inflar o arquivo.
+   Em produção isto vem de endpoint, não hardcoded.
+   ============================================================ */
+const CLIENTES_RAW = `Prefeitura de Arroio Trinta|445
+Prefeitura de Mossoró|1123
+Prefeitura de Sombrio|1228
+Prefeitura de Garruchos|1355
+Câmara Municipal de Saudade do Iguaçu|1776
+Prefeitura de Alvarenga|1867
+Prefeitura de São Ludgero|2124
+Prefeitura de Nerópolis|2120
+Prefeitura de Dom Pedro de Alcântara|1919
+Companhia de Gás do Amazonas|2198
+Prefeitura de Quatá|1490
+Prefeitura de Água Comprida|1696
+Câmara Municipal de Alfenas|2152
+Prefeitura de Juara|1798
+Prefeitura de Trindade|2191
+Câmara de Paulínia|2131
+Prefeitura de Tupandi|2141
+Prefeitura de Bela Vista|2105
+Câmara de Três Lagoas MS|2197
+Prefeitura de Areia|1307
+Câmara de Maracaí|1692
+Prefeitura de Boa Ventura de São Roque|2007
+Prefeitura de Boa Vista do Buricá|2083
+Prefeitura de Pedro Osório|1318
+Câmara de Itaara|2249
+Prefeitura de Moju|2066
+Câmara de Embu-Guaçu|1936
+Prefeitura Municipal de Torres/RS|2148
+Prefeitura de Rio Doce|1598
+Prefeitura de Mangueirinha|2067
+Prefeitura de Lages|1237
+Prefeitura de Portão|1804
+Prefeitura de Urubici|1603
+Câmara Municipal de Mairiporã|1216
+Prefeitura de Iporã|1352
+Prefeitura de Taparuba|1951
+MDB - Movimento Democrático Brasileiro|1127
+Câmara de Maricá|1406
+Prefeitura de Terra Santa|2058
+Câmara de Angatuba|2212
+Prefeitura Municipal de Irani|1482
+Prefeitura de Carmo de Minas|1613
+Prefeitura de São Martinho|345
+Câmara de Rio Brilhante|2102
+Prefeitura de Nortelândia|1302
+Câmara de Salgueiro|2004
+Câmara Municipal de Petrolina|1097
+Prefeitura de Santa Rosa de Viterbo|2062
+Prefeitura de Cedro do Abaeté|1869
+Prefeitura de Passira|2008
+Prefeitura de Peçanha|1595
+Prefeitura de Florínea|1826
+Câmara de Jataí|2052
+Prefeitura Municipal de Sapezal|1717
+Câmara de Tangará da Serra|1950
+Prefeitura de Pirenópolis|2196
+Prefeitura de Chapadão do Céu|1911
+Prefeitura de São José do Cerrito|2108
+Câmara de Nazaré Paulista|1980
+Prefeitura de Cerro Largo|2110
+Prefeitura de Caracaraí|1546
+Prefeitura de São José do Campestre|1285
+Câmara de Álvares Machado|1309
+Câmara de Formosa do Oeste|1781
+Câmara de Cajati|1907
+Câmara de Santa Bárbara|1969
+Prefeitura de Montes Claros|2002
+Prefeitura de Caparaó|1639
+Prefeitura de Bom Jesus do Sul|1926
+Câmara de Pedra Bela|2170
+Prefeitura de Carvalhos|1939
+Prefeitura de Aparecida do Taboado|2069
+Câmara de Parnamirim|1321
+Prefeitura de Juazeiro|467
+Prefeitura de Toropi|930
+Prefeitura de Mar de Espanha|1365
+Serviço Autônomo de Água e Esgotos de Mogi Mirim|1413
+Prefeitura de Poxoréu|1895
+Prefeitura de Maratá|1922
+Prefeitura de Santarém|1562
+Prefeitura de Palotina|388
+Consórcio Intermunicipal de Desenvolvimento Regional|511
+Câmara de Dom Pedrito|1892
+Câmara de Bauru|1698
+Prefeitura de Irineópolis|296
+Prefeitura de Brusque|545
+Prefeitura de Cândido Godoi|931
+Prefeitura de Piraí do Sul|1710
+Câmara de Boituva|1497
+Prefeitura de Iomerê|2129
+Prefeitura de Jaraguari|1566
+Prefeitura de Salgueiro|1973
+Prefeitura de Foz do Jordão|2045
+Prefeitura de Encantado|1585
+Prefeitura de São João Batista|2065
+Prefeitura de Balneário Pinhal|1168
+Prefeitura de Amargosa|517
+Prefeitura de São Martinho da Serra|1705
+Prefeitura de Nova Petrópolis|1422
+Prefeitura de Tupanciretã|969
+Prefeitura de Ubiretama|1436
+Prefeitura de Cerro Negro|1686
+SAAE - Serviço Autônomo de Água e Esgoto|495
+Prefeitura de Pedra Branca do Amapari|1557
+Prefeitura de Candói|1172
+Prefeitura de Rio Quente|1770
+Prefeitura de Jarinu|1380
+Prefeitura de Pedras de Fogo|1390
+SAAE - Serviço Autônomo de Água e Esgoto de Nova Mutum|1967
+Prefeitura de Guaxupé|2029
+Prefeitura de Comodoro|2026
+Prefeitura de Vacaria|1774
+Prefeitura de Firminópolis|2018
+Prefeitura de Turvo|1468
+Prefeitura de Itaquiraí|1600
+Prefeitura de Petrolina|310
+Prefeitura de Maragogi|1337
+Prefeitura de Santa Vitória do Palmar|1340
+Câmara de Cáceres|1350
+Prefeitura de Padre Bernardo|1998
+Prefeitura de Pinheiro Preto|420
+Câmara de São José|1697
+Prefeitura de Pontal do Paraná|1078
+Prefeitura de Ampere|1691
+Prefeitura de Nova Campina|1990
+Prefeitura Municipal de Cacimbinhas|1400
+Prefeitura Municipal de Vila Nova do Sul|1520
+Prefeitura de Marabá Paulista|1493
+Prefeitura de São Miguel do Oeste|643
+Prefeitura de Irupi|1554
+Prefeitura de Ivoti|1687
+Prefeitura de Palmital|1713
+Prefeitura de Parnamirim|1188
+Prefeitura de Votuporanga|1584
+Prefeitura de Campo Novo do Parecis|1580
+Prefeitura de Tapes|745
+Município de Dona Emma|533
+Prefeitura de Presidente Olegário|1983
+Prefeitura de Ananindeua|1217
+Câmara de São Gonçalo do Rio Abaixo|1198
+Prefeitura de Garuva|391
+Prefeitura de Mogi das Cruzes|1299
+Prefeitura de Ilhota|987
+Prefeitura de Eldorado|1272
+Prefeitura de Soledade|1548
+Prefeitura de Macapá|564
+Prefeitura de Formosa do Oeste|1354
+Prefeitura de São José do Belmonte|2017
+Prefeitura Municipal de Viamão|894
+Prefeitura de Piraquara|392
+Prefeitura de Manoel Viana|1246
+Prefeitura de Pitanga|1371
+Prefeitura de Encruzilhada do Sul|1541
+Prefeitura de Caçapava do Sul|1538
+Prefeitura de Santa Bárbara|1772
+Serviço Autônomo de Água e Esgotos de Aparecida|1420
+Prefeitura de Guaíra|351
+Prefeitura de Laguna|1180
+Prefeitura de Iguape|1345
+Prefeitura de Limeira|1749
+Prefeitura de Piquete|1525
+Município de Santa Bárbara d'Oeste|1454
+Prefeitura de Penha|346
+Prefeitura de Balneário Camboriú|466
+Prefeitura de João Pessoa|1220
+Prefeitura de Jardinópolis|1214
+Prefeitura de Pedreira|1499
+Prefeitura de Nova Esperança|1239
+Prefeitura de Chapecó|384
+Prefeitura de Santana do Paraíso|1991
+Prefeitura de Dois Vizinhos|1722
+Prefeitura de Coronel Vivida|1169
+Câmara Municipal de Caratinga|1665
+Prefeitura de Valinhos|1582
+Prefeitura de Alto Bela Vista|1023
+Prefeitura de São José da Lapa|1607
+Prefeitura de Senador Canedo|1579
+Prefeitura de Orleans|1483
+Prefeitura de Paragominas|1643
+Prefeitura de Curitibanos|1757
+Prefeitura de Abelardo Luz|354
+Prefeitura de Triunfo|1563
+Prefeitura de Nova Pádua|372
+Prefeitura de Reserva do Iguaçu|1962
+Prefeitura de Pescaria Brava|2103
+Prefeitura de Santa Isabel do Ivaí|1416
+Câmara de Penha|1953
+Prefeitura de Salesópolis|1485
+Prefeitura de Bernardino de Campos|1459
+Prefeitura de Caçador|295
+Prefeitura de Eldorado do Sul|1389
+Prefeitura de Rio Pardo|1423
+Câmara de Alegrete|1685
+Prefeitura de Vespasiano Corrêa|1988
+Prefeitura de Taubaté|1351
+Câmara Municipal de Aracaju|1219
+Prefeitura de Assis Chateaubriand|1480
+Prefeitura de Braço do Norte|368
+Prefeitura de Barra do Ribeiro|1426
+Prefeitura de São Lourenço do Sul|1736
+Prefeitura de Cajati|1292
+Prefeitura de Chapadão do Sul|531
+Prefeitura de Pinheiro Machado|1184
+Prefeitura de Baependi|1489
+Prefeitura de Marialva|540
+Prefeitura de Lebon Regis|376
+SAAE SALTO - Serviço Autônomo de Água e Esgoto de Salto|1699
+Prefeitura de Schroeder|397
+Prefeitura de Itapema|193
+Prefeitura de Americana|535
+Prefeitura de Imigrante|2106
+Prefeitura de Agudos|1500
+Prefeitura de Palhoça|3
+Prefeitura de Rio Verde de Mato Grosso|2061
+Câmara de Foz do Iguaçu|1684
+Prefeitura de Piratininga|1275
+Prefeitura de São Bento do Sapucaí|1590
+Prefeitura de Canguçu|612
+Prefeitura de Caraá|2010
+Prefeitura de São Lourenço do Oeste|499
+Prefeitura de Belmonte|1863
+Prefeitura de Dom Pedrito|1505
+Prefeitura de Santa Clara do Sul|575
+Prefeitura de Floreal|1504
+Câmara de Santa Isabel|1377
+Prefeitura de Arujá|1282
+Prefeitura de Lucas do Rio Verde|1858
+Prefeitura de Palmeira|448
+Prefeitura de Confins|455
+Prefeitura de Cabedelo|478
+Prefeitura de Capão Alto|341
+Prefeitura de Porto Feliz|1191
+Prefeitura de Cidreira|2080
+Prefeitura de Jacupiranga|560
+Prefeitura de São Francisco de Assis|1393
+Câmara de Uruguaiana|1815
+Prefeitura Municipal de Araçatuba|1515
+Prefeitura de Chácara|1806
+Prefeitura de Gonçalves|1949
+Prefeitura de Presidente Venceslau|1209
+Prefeitura de Bom Retiro do Sul|1539
+Prefeitura de Itaara|1320
+Prefeitura de Alto Feliz|1631
+Prefeitura de Botuverá|412
+Prefeitura de Estância de Atibaia|508
+Câmara Municipal de Pato Branco|1558
+Prefeitura de Teresópolis|1330
+Prefeitura Municipal de Marília|1481
+Prefeitura de Bom Jesus dos Perdões|1506
+Prefeitura de Taboão da Serra|1633
+Prefeitura de Magda|1297
+Prefeitura de Tubarão|343
+Prefeitura de Putinga|1589
+Prefeitura de Mandaguaçu|441
+Prefeitura de São José do Norte|481
+Prefeitura de Mata de São João|1200
+Prefeitura de Alto Caparaó|2027
+Prefeitura de Araraquara|1547
+Prefeitura de Presidente Prudente|393
+Prefeitura de Américo Brasiliense|646
+Prefeitura de Piedade do Rio Grande|1723
+Prefeitura de Garça|387
+Prefeitura de Guaporé|506
+Câmara Municipal de Matão|1578
+Prefeitura de Jambeiro|1518
+Prefeitura de Tupã|974
+Prefeitura de Estrela|1550
+Câmara Municipal de Paraíso das Águas|2071
+Câmara de São José do Norte|1943
+Câmara Municipal de Canguçu|1654
+Prefeitura de São Sepé|203
+Prefeitura de Paraopeba|1915`;
+
+/* Deduz o tipo de organização pelo nome — evita uma pergunta e ainda dá o corte no painel */
+function tipoDe(nome) {
+  const n = nome.toLowerCase();
+  if (n.includes('câmara')) return 'Câmara';
+  if (n.includes('saae') || n.includes('água') || n.includes('esgoto')) return 'Saneamento';
+  if (n.includes('consórcio')) return 'Consórcio';
+  if (n.includes('prefeitura') || n.startsWith('município')) return 'Prefeitura';
+  return 'Outro';
+}
+const CLIENTES = CLIENTES_RAW.split('\n').map(l => {
+  const [nome, id] = l.split('|');
+  return { nome, id, tipo: tipoDe(nome), busca: nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') };
+});
+const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/* ============================================================
+   1 · PERSISTÊNCIA
+   ============================================================ */
+const HAS_STORE = typeof window !== 'undefined' && !!window.storage;
+const MEM = new Map();
+const DB = {
+  async get(k, sh = true) { if (!HAS_STORE) return MEM.has(k) ? MEM.get(k) : null;
+    try { const r = await window.storage.get(k, sh); return r ? JSON.parse(r.value) : null; } catch { return null; } },
+  async set(k, v, sh = true) { if (!HAS_STORE) { MEM.set(k, v); return true; }
+    try { return !!(await window.storage.set(k, JSON.stringify(v), sh)); } catch { return false; } },
+  async del(k, sh = true) { if (!HAS_STORE) { MEM.delete(k); return true; }
+    try { await window.storage.delete(k, sh); return true; } catch { return false; } },
+  async keys(pfx, sh = true) { if (!HAS_STORE) return [...MEM.keys()].filter(k => k.startsWith(pfx));
+    try { const r = await window.storage.list(pfx, sh); return r?.keys || []; } catch { return []; } },
+  async all(pfx, sh = true) { const ks = await DB.keys(pfx, sh);
+    return (await Promise.all(ks.map(k => DB.get(k, sh)))).filter(Boolean); }
+};
+const RK = 'irdresp:', CFG = 'irdcfg', DRAFT = 'irddraft';
+
+/* ============================================================
+   2 · MODELO
+   Pesquisa do REDESIGN. Migração recente, com opção de voltar
+   ao legado — por isso a reversão é cidadã de primeira classe.
+   ============================================================ */
+const WAVES = ['2026-Q1', '2026-Q2', '2026-Q3'];
+const WAVE_NOW = '2026-Q3';
+
+const PAPEIS = ['Protocolo e atendimento ao público', 'Servidor administrativo', 'Gestor de setor',
+  'Secretaria ou diretoria', 'Jurídico e procuradoria', 'Recursos humanos', 'Contabilidade e finanças',
+  'Compras e licitações', 'Tecnologia da informação', 'Ouvidoria', 'Gabinete e assessoria',
+  'Legislativo (câmara)', 'Outro'];
+const TEMPO = ['Menos de 1 mês', '1 a 3 meses', '3 a 6 meses', 'Mais de 6 meses'];
+const FREQ = ['Várias vezes por dia', 'Uma vez por dia', 'Algumas vezes por semana', 'Raramente'];
+
+/* Áreas já no redesign — são as únicas que recebem nota do redesign. */
+const AREAS_RD = ['Inbox', 'Processos', 'Assinaturas', 'Fila de assinatura',
+  'Central de ações', 'Central de atendimento', 'Minha conta'];
+/* Áreas que continuam na versão anterior. Entram na pergunta de convivência, não na nota. */
+const AREAS_LEG = ['Criar novos processos', 'Administrativo'];
+const AREAS = [...AREAS_RD, ...AREAS_LEG];
+const JORN = [
+  { k: 'achar', n: 'Encontrar um processo ou documento', d: 'busca, filtros, Inbox' },
+  { k: 'analisar', n: 'Analisar um processo', d: 'abrir, ler, conferir o que já foi feito' },
+  { k: 'assinar', n: 'Assinar um documento', d: 'fila de assinatura' },
+  { k: 'pendencias', n: 'Ver o que está pendente para mim', d: 'Inbox e Central de ações' },
+  { k: 'atender', n: 'Atender um pedido do cidadão', d: 'Central de atendimento' }
+];
+/* Comparação com a versão antiga: as dimensões em que um redesign ganha ou perde. */
+const DIMS = [
+  { k: 'achar', n: 'Encontrar o que eu preciso', d: 'busca, menus, onde as coisas ficam' },
+  { k: 'cliques', n: 'Número de cliques para concluir', d: 'quantos passos até terminar a tarefa' },
+  { k: 'velocidade', n: 'Velocidade do sistema', d: 'tempo de carregar as telas' },
+  { k: 'clareza', n: 'Clareza da informação na tela', d: 'entender o que está vendo' },
+  { k: 'aprender', n: 'Aprender e ensinar alguém', d: 'quanto custa treinar um colega' },
+  { k: 'aparencia', n: 'Aparência', d: 'como o sistema se apresenta' }
+];
+const STATUS = [
+  { k: 'usa', n: 'Sim, o redesign está ativo para mim', d: 'é o layout que eu vejo hoje' },
+  { k: 'voltou', n: 'Desativei o redesign e voltei para a versão anterior', d: 'quero contar o motivo' },
+  { k: 'nao_sei', n: 'Não sei dizer qual versão estou usando', d: 'nunca prestei atenção nisso' }
+];
+const REV_TEMPO = ['Menos de um dia', 'Alguns dias', 'Algumas semanas', 'Mais de um mês'];
+const REV_QUANDO = ['Nesta semana', 'Neste mês', 'Há mais de um mês'];
+const REV_MOTIVOS = ['Não conseguia achar as coisas', 'Ficou mais lento',
+  'Faltava uma função que eu usava', 'Muitos cliques para o que era rápido',
+  'Encontrei erros ou falhas', 'Minha equipe não se adaptou', 'Faltou treinamento',
+  'Prefiro o visual da versão antiga', 'Outro motivo'];
+const ADMIN_ATRITO = [
+  { v: 0, n: 'Não sinto diferença', d: 'para mim é o mesmo sistema' },
+  { v: 1, n: 'Percebo a troca, mas não me atrapalha', d: 'noto o layout mudar e sigo' },
+  { v: 2, n: 'Me atrapalha um pouco', d: 'perco alguns segundos me reorientando' },
+  { v: 3, n: 'Me atrapalha bastante', d: 'atrasa a tarefa ou confunde minha equipe' }
+];
+const RISCO = [
+  { v: 0, n: 'Não, nem passou pela cabeça', d: '' },
+  { v: 1, n: 'Sim, já pensei', d: 'mas continuo com o redesign' },
+  { v: 2, n: 'Sim, e minha equipe já pediu', d: 'há pressão para voltar' }
+];
+
+const TAXO = [
+  ['Desempenho', ['lent', 'trava', 'demora', 'carregar', 'pesado', 'devagar', 'congel']],
+  ['Encontrar informação', ['acha', 'encontr', 'busca', 'buscar', 'filtro', 'localizar', 'menu', 'navega', 'perdid', 'onde fica']],
+  ['Cliques e repetição', ['clique', 'passos', 'um por um', 'lote', 'repet', 'de novo', 'retrabalho']],
+  ['Curva de aprendizado', ['aprender', 'reaprend', 'acostum', 'adapta', 'ensinar', 'mudou de lugar', 'estranh']],
+  ['Erros e estabilidade', ['erro', 'bug', 'falha', 'fora do ar', 'instáv', 'caiu']],
+  ['Funcionalidade faltante', ['falta', 'não tem', 'sumiu', 'precisava', 'seria bom', 'gostaria que', 'tinha na antiga']],
+  ['Convivência com o legado', ['administrativo', 'versão antiga', 'legado', 'duas versões', 'troca de tela', 'volta pro antigo']],
+  ['Assinaturas', ['assinatura', 'assinar', 'certificado', 'fila de assinatura']],
+  ['Central de atendimento', ['central de atendimento', 'cidadão', 'protocolo do cidadão', 'pedido do cidadão']],
+  ['Visual e leitura', ['visual', 'fonte', 'letra', 'cor', 'espaç', 'poluíd', 'bonit', 'leitura']],
+  ['Notificações', ['notifica', 'aviso', 'alerta', 'lembrete']],
+  ['Relatórios e dados', ['relatóri', 'exportar', 'planilha', 'indicador']],
+  ['Permissões', ['permiss', 'acesso', 'liberar', 'perfil de']],
+  ['Mobile', ['celular', 'mobile', 'aplicativo', 'tablet']],
+  ['Treinamento e suporte', ['treinamento', 'manual', 'tutorial', 'suporte', 'ajuda', 'chamado']]
+];
+function classify(t) {
+  const s = norm(t);
+  const h = TAXO.filter(([, kw]) => kw.some(k => s.includes(norm(k)))).map(([n]) => n);
+  return h.length ? h : ['Não classificado'];
+}
+
+/* ============================================================
+   3 · CÁLCULO
+   IRD = índice do redesign. A taxa de reversão fica FORA dele:
+   composto dilui, e esse número precisa ser visto puro.
+   ============================================================ */
+const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+const r1 = n => Math.round(n * 10) / 10;
+const plur = (n, s1, sN) => n + ' ' + (n === 1 ? s1 : sN);
+
+const umuxLite = (u1, u2) => 0.65 * (((u1 - 1) + (u2 - 1)) / 12 * 100) + 22.9;
+const cesNorm = v => v.length ? (avg(v) - 1) / 6 * 100 : 0;
+const prefIdx = objs => {                       // matriz vs legado: -1..+1 -> 0..100
+  const all = objs.flatMap(o => Object.values(o || {}).filter(v => v !== null && v !== undefined));
+  return all.length ? (avg(all) + 1) / 2 * 100 : 0;
+};
+function scoresFor(list) {
+  if (!list.length) return null;
+  const ativos = list.filter(r => r.status !== 'voltou');
+  const rev = list.filter(r => r.status === 'voltou');
+  const umux = ativos.length ? avg(ativos.map(r => umuxLite(r.u1, r.u2))) : 0;
+  const ces = cesNorm(ativos.flatMap(r => Object.values(r.ces || {}).filter(Boolean)));
+  const nota = avg(list.map(r => r.nota).filter(n => n !== null && n !== undefined));
+  const pref = prefIdx(ativos.map(r => r.legado));
+  return {
+    n: list.length, nAtivos: ativos.length, nRev: rev.length,
+    ird: r1(0.35 * umux + 0.25 * ces + 0.20 * nota * 10 + 0.20 * pref),
+    umux: r1(umux), ces: r1(ces), cesRaw: r1(avg(ativos.flatMap(r => Object.values(r.ces || {}).filter(Boolean)))),
+    nota: r1(nota), pref: r1(pref),
+    reversao: r1(rev.length / list.length * 100),
+    risco: r1(ativos.filter(r => r.risco > 0).length / (ativos.length || 1) * 100),
+    naoSabe: ativos.filter(r => r.status === 'nao_sei').length,
+    admin: r1(avg(ativos.map(r => r.admin).filter(v => v !== null && v !== undefined))),
+    atrito: r1(ativos.filter(r => r.admin >= 2).length / (ativos.length || 1) * 100)
+  };
+}
+const notaBand = s => s >= 9 ? 'pro' : s >= 7 ? 'neu' : 'det';
+const notaLabel = s => s >= 9 ? 'Promotor' : s >= 7 ? 'Neutro' : 'Detrator';
+function nivel(k) {
+  if (k >= 4) return { n: 'Diamante', i: 'IV', d: 'Roadmap preview trimestral e selo do órgão' };
+  if (k === 3) return { n: 'Ouro', i: 'III', d: 'Sessão fechada de roadmap com a equipe de produto' };
+  if (k === 2) return { n: 'Prata', i: 'II', d: 'Acesso antecipado às próximas telas do redesign' };
+  return { n: 'Bronze', i: 'I', d: 'Acompanhamento das suas sugestões' };
+}
+
+/* ============================================================
+   4 · FLUXO — o status do redesign define o caminho
+   ============================================================ */
+const FLOW_BASE = ['abertura', 'cliente', 'perfil', 'status'];
+const FLOW_USA = ['uso', 'nota', 'umux', 'legado', 'ces', 'areas', 'risco', 'prioridade', 'encerrar', 'recibo'];
+const FLOW_REV = ['rev_quando', 'rev_motivos', 'rev_volta', 'nota', 'encerrar', 'recibo'];
+function flow() {
+  if (S.a.status === 'voltou') return [...FLOW_BASE, ...FLOW_REV];
+  if (S.a.status) return [...FLOW_BASE, ...FLOW_USA];
+  return FLOW_BASE;
+}
+const BLOCOS_DEF = [
+  { n: 'Abertura', keys: ['abertura'] },
+  { n: 'Quem responde', keys: ['cliente', 'perfil', 'status', 'uso'] },
+  { n: 'O redesign', keys: ['nota', 'umux', 'legado', 'rev_quando', 'rev_motivos', 'rev_volta'] },
+  { n: 'No dia a dia', keys: ['ces', 'areas', 'risco', 'prioridade'] },
+  { n: 'Encerramento', keys: ['encerrar', 'recibo'] }
+];
+/* só os blocos que existem no caminho atual — quem voltou ao legado não passa por todos */
+const blocosDoFluxo = () => { const f = flow();
+  return BLOCOS_DEF.map(b => ({ ...b, mine: b.keys.filter(k => f.includes(k)) })).filter(b => b.mine.length); };
+const curKey = () => flow()[S.step] || 'recibo';
+const isLast = () => curKey() === 'recibo';
+
+/* ============================================================
+   5 · ESTADO
+   ============================================================ */
+const emptyA = () => ({
+  cliente: null, papel: '', papelOutro: '', tempo: '', freq: '', status: '',
+  jorn: [], areas: [], nota: null, notaWhy: '', u1: null, u2: null,
+  legado: {}, legadoWorse: '', ces: {}, sat: {}, admin: null, adminWhy: '',
+  risco: null, riscoWhy: '', oneThing: '', timeSink: '',
+  revUsou: '', revQuando: '', revMotivos: [], revPonto: '', revTraria: '', revRecomenda: '',
+  talk: null, nome: '', email: ''
+});
+const S = {
+  route: 'pesquisa', step: 0, proto: null, opened: null, stamps: {}, anim: true,
+  a: emptyA(), sent: false, streak: 1, query: '',
+  auth: false, data: [], waveSel: WAVE_NOW, filt: 'all', tipoFilt: 'all',
+  ai: null, aiLoading: false, loading: true
+};
+const el = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const hhmm = d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+const codigo = () => 'RD-' + new Date().getFullYear() + '/' + Math.floor(Math.random() * 9000 + 1000);
+function toast(m) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = m;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
+const readRoute = () => (location.hash || '').replace('#/', '').split('?')[0] === 'painel' ? 'painel' : 'pesquisa';
+window.addEventListener('hashchange', () => { S.route = readRoute(); render(); });
+const DOCMODE = (location.search + location.hash).includes('doc=1');
+const CORE = DOCMODE ? `<span class="q-core">CORE · não alterar</span>` : '';
+
+/* ============================================================
+   6 · PESQUISA
+   ============================================================ */
+function trailHTML() {
+  const k = curKey(), bs = blocosDoFluxo();
+  const cur = bs.findIndex(b => b.mine.includes(k));
+  return `<div class="trail">
+    <div class="trail-compact"><b>${String(cur + 1).padStart(2, '0')}/${String(bs.length).padStart(2, '0')}</b><i>${bs[cur].n}</i></div>
+    <div class="trail-h">Etapas</div><div class="trail-list">` +
+    bs.map((b, i) => {
+      const done = i < cur, now = i === cur;
+      const feitos = b.mine.filter(x => S.stamps[x]).length;
+      return `<div class="tr-item ${done ? 'done' : ''} ${now ? 'now' : ''}">
+        <div class="tr-dot">${done ? '✓' : String(i + 1).padStart(2, '0')}</div>
+        <div><div class="tr-name">${b.n}</div>
+        ${done ? `<div class="tr-stamp">concluído ${S.stamps[b.mine[b.mine.length - 1]] || ''}</div>`
+        : now ? `<div class="tr-stamp">em andamento · ${feitos}/${b.mine.length}</div>` : ''}</div></div>`;
+    }).join('') + `</div></div>`;
+}
+
+function opt(act, label, sub, on, round) {
+  return `<button class="opt ${on ? 'on' : ''}" data-act="${act}">
+    <span class="opt-box ${round ? 'round' : ''}">${round ? '●' : '✓'}</span>
+    <span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
+}
+function likert(name, val, lo, hi) {
+  let b = ''; for (let i = 1; i <= 7; i++) b += `<button class="${val === i ? 'on' : ''}" data-act="${name}:${i}">${i}</button>`;
+  return `<div class="lik">${b}</div><div class="scale-ends"><span>${lo}</span><span>${hi}</span></div>`;
+}
+const eyeb = (b, t, core) => `<div class="card-eyebrow"><b>${b}</b><span class="eyebrow">${t}</span>${core ? CORE : ''}</div>`;
+
+function nav(ok, skip, label) {
+  return `<div class="actions">
+    ${S.step > 0 ? `<button class="btn btn-gho" data-act="back">Voltar</button>` : ''}
+    <button class="btn btn-pri" data-act="next" ${ok ? '' : 'disabled'}>${label || 'Continuar'}</button>
+    ${skip ? `<button class="btn btn-txt" data-act="next">Pular esta</button>` : ''}
+    <span class="act-note">${ok ? `<span class="kbd">Enter</span> para continuar` : 'Responda para continuar'}</span>
+  </div>`;
+}
+
+function stepHTML() {
+  const a = S.a, k = curKey();
+  const rev = a.status === 'voltou';
+
+  if (k === 'abertura') return `<div class="card"><div class="open-hero">
+    <div class="eyebrow">Pesquisa do redesign · onda ${WAVE_NOW}</div>
+    <h1 class="open-title">O redesign do 1Doc. <em>A gente quer a sua nota.</em></h1>
+    <p class="open-lead">Esta pesquisa é só sobre o redesign: o que ficou melhor que a versão anterior, o que ficou pior e o que ainda falta. Se você desativou o redesign e voltou para a versão anterior, ela também é para você — talvez principalmente.</p>
+    <div class="facts">
+      <div class="fact"><b>3 min</b><span>tempo médio de resposta</span></div>
+      <div class="fact"><b>2</b><span>abertas obrigatórias</span></div>
+      <div class="fact"><b>1x</b><span>por trimestre, nada além disso</span></div>
+      <div class="fact"><b>${CLIENTES.length}</b><span>órgãos com o redesign</span></div>
+    </div>
+    <div class="callout"><b>Por que perguntamos de novo:</b> a gente está ouvindo e ajustando. Cada rodada desta pesquisa vira prioridade de trabalho no trimestre seguinte, e no fechamento da onda você fica sabendo o que entrou e o que ficou de fora.</div>
+    <div class="actions"><button class="btn btn-pri" data-act="next">Começar</button>
+      <span class="act-note">Suas respostas não ficam vinculadas ao seu nome</span></div>
+  </div></div>`;
+
+  if (k === 'cliente') {
+    const q = norm(S.query);
+    const hits = q.length < 2 ? [] : CLIENTES.filter(c => c.busca.includes(q)).slice(0, 40);
+    return `<div class="card">${eyeb('BLOCO 01', 'Quem responde')}
+      <h2 class="q">De qual órgão você fala?</h2>
+      <p class="q-help">Digite o nome para buscar. A lista tem os ${CLIENTES.length} órgãos que já receberam o redesign. Isso permite ver a nota por órgão e por tipo — prefeitura, câmara e autarquia usam o 1Doc de formas bem diferentes.</p>
+      ${a.cliente ? `<div class="pick-sel"><span class="opt-box round" style="background:var(--primary);border-color:var(--primary);color:#fff">●</span>
+          <span>${esc(a.cliente.nome)}<small style="display:block;font-weight:400;color:var(--ink-soft);font-size:12.5px">${a.cliente.tipo}</small></span>
+          <span class="pid">#${a.cliente.id}</span></div>
+        <div class="actions" style="border:none;padding-top:16px;margin-top:8px">
+          <button class="btn btn-txt" data-act="unpick">Trocar de órgão</button></div>`
+      : `<div class="pick-wrap">
+          <input class="inp" id="cq" data-act="query" value="${esc(S.query)}" placeholder="Ex.: Palhoça, Câmara de Bauru, SAAE..." autocomplete="off">
+          ${q.length < 2 ? `<div class="pick-count">Digite ao menos 2 letras</div>`
+            : hits.length ? `<div class="pick-list">${hits.map(c =>
+                `<button class="pick-item" data-act="pick:${c.id}"><span class="pkind">${c.tipo}</span>
+                  <span>${esc(c.nome)}</span><span class="pid">#${c.id}</span></button>`).join('')}</div>
+              <div class="pick-count">${plur(hits.length, 'órgão encontrado', 'órgãos encontrados')}${hits.length === 40 ? ' · refine a busca' : ''}</div>`
+            : `<div class="pick-list"><div class="pick-none">Nenhum órgão com esse nome na lista do redesign.
+                Se o seu órgão não aparece, pode ser que ele ainda não tenha recebido o redesign — nesse caso, feche esta pesquisa e avise o suporte.</div></div>`}
+        </div>`}
+      ${nav(!!a.cliente)}</div>`;
+  }
+
+  if (k === 'perfil') return `<div class="card">${eyeb('BLOCO 01', 'Quem responde')}
+    <h2 class="q">O que você faz no dia a dia?</h2>
+    <p class="q-help">O redesign afeta cada função de um jeito diferente. Quem fica no protocolo sente a mudança de tela muito mais do que quem entra uma vez por semana.</p>
+    <div class="fields">
+      <div><label class="f-label">Sua área ou função</label>
+        <div class="opts-grid">${PAPEIS.map(p => opt('set:papel:' + p, p, '', a.papel === p, true)).join('')}</div>
+        ${a.papel === 'Outro' ? `<input class="inp" style="margin-top:9px" data-act="txt:papelOutro" value="${esc(a.papelOutro)}" placeholder="Qual é a sua função?">` : ''}</div>
+      <div><label class="f-label">Há quanto tempo o redesign está ativo para você</label>
+        <div class="opts-grid">${TEMPO.map(t => opt('set:tempo:' + t, t, '', a.tempo === t, true)).join('')}</div></div>
+      <div><label class="f-label">Com que frequência você abre o 1Doc</label>
+        <div class="opts-grid">${FREQ.map(f => opt('set:freq:' + f, f, '', a.freq === f, true)).join('')}</div></div>
+    </div>${nav(a.papel && (a.papel !== 'Outro' || a.papelOutro.trim()) && a.tempo && a.freq)}</div>`;
+
+  if (k === 'status') return `<div class="card">${eyeb('BLOCO 01', 'Versão em uso', 1)}
+    <h2 class="q">Você está com o redesign ativo agora?</h2>
+    <p class="q-help">Esta é a pergunta mais importante da pesquisa. Quem desativou o redesign responde um caminho mais curto, só sobre o motivo.</p>
+    <div class="opts">${STATUS.map(s => opt('status:' + s.k, s.n, s.d, a.status === s.k, true)).join('')}</div>
+    ${nav(!!a.status)}</div>`;
+
+  /* ---------- ramo: voltou para o legado ---------- */
+  if (k === 'rev_quando') return `<div class="card">${eyeb('BLOCO 02', 'Voltou para a versão anterior')}
+    <div class="branch"><b>Obrigado por dizer isso.</b> Quem desativou o redesign é quem tem a informação mais útil que existe sobre ele. São quatro telas.</div>
+    <h2 class="q">Quanto tempo você usou o redesign antes de voltar?</h2>
+    <p class="q-help">Faz diferença: desistir no primeiro dia costuma ser um problema de adaptação, desistir depois de semanas costuma ser algo que o redesign realmente não faz.</p>
+    <div class="opts">${REV_TEMPO.map(t => opt('set:revUsou:' + t, t, '', a.revUsou === t, true)).join('')}</div>
+    <div style="margin-top:26px"><label class="f-label">Quando você voltou?</label>
+      <div class="opts-grid">${REV_QUANDO.map(t => opt('set:revQuando:' + t, t, '', a.revQuando === t, true)).join('')}</div></div>
+    ${nav(a.revUsou && a.revQuando)}</div>`;
+
+  if (k === 'rev_motivos') return `<div class="card">${eyeb('BLOCO 02', 'Voltou para a versão anterior')}
+    <h2 class="q">O que te fez voltar?</h2>
+    <p class="q-help">Marque tudo que pesou. Depois conta o ponto específico — é o detalhe que faz a correção acontecer.</p>
+    <div class="opts">${REV_MOTIVOS.map(m => opt('tog:revMotivos:' + m, m, '', a.revMotivos.includes(m))).join('')}</div>
+    <div class="fields" style="margin-top:26px"><div>
+      <label class="f-label">Qual foi o ponto específico? <span>· obrigatório</span></label>
+      <textarea class="inp" data-act="txt:revPonto" placeholder="Uma tela, uma tarefa, um botão que você não encontrou mais. Quanto mais específico, melhor.">${esc(a.revPonto)}</textarea>
+      <div class="charc">${a.revPonto.length} caracteres · mínimo 15</div></div></div>
+    ${nav(a.revMotivos.length > 0 && a.revPonto.trim().length >= 15)}</div>`;
+
+  if (k === 'rev_volta') return `<div class="card">${eyeb('BLOCO 02', 'Voltou para a versão anterior')}
+    <h2 class="q">O que precisaria acontecer para você reativar o redesign?</h2>
+    <p class="q-help">Isso vira item de roadmap com o seu código anexado. Quando estiver resolvido, você é avisado.</p>
+    <div class="fields"><div>
+      <textarea class="inp" style="min-height:120px" data-act="txt:revTraria" placeholder="Pode ser uma correção, uma função que falta, um treinamento.">${esc(a.revTraria)}</textarea>
+      <div class="charc">${a.revTraria.length} caracteres · mínimo 15</div></div>
+      <div><label class="f-label">Hoje, você recomendaria que outro órgão ativasse o redesign?</label>
+        <div class="opts-grid">${['Sim', 'Depende', 'Não'].map(v => opt('set:revRecomenda:' + v, v, '', a.revRecomenda === v, true)).join('')}</div></div>
+    </div>${nav(a.revTraria.trim().length >= 15 && a.revRecomenda)}</div>`;
+
+  /* ---------- ramo: usa o redesign ---------- */
+  if (k === 'uso') return `<div class="card">${eyeb('BLOCO 03', 'No dia a dia')}
+    <h2 class="q">Onde você trabalha dentro do 1Doc?</h2>
+    <p class="q-help">Só vamos perguntar sobre o que você marcar. Ninguém deveria dar nota a uma tela que nunca abriu.</p>
+    <div class="fields">
+      <div><label class="f-label">Áreas que você usa <span>· já com o redesign</span></label>
+        <div class="opts-grid">${AREAS_RD.map(m => opt('tog:areas:' + m, m, '', a.areas.includes(m))).join('')}</div></div>
+      <div><label class="f-label">Você também usa estas? <span>· continuam na versão anterior</span></label>
+        <div class="opts-grid">${AREAS_LEG.map(m => opt('tog:areas:' + m, m, 'ainda no layout antigo', a.areas.includes(m))).join('')}</div></div>
+      <div><label class="f-label">Tarefas que você faz com alguma frequência</label>
+        <div class="opts">${JORN.map(j => opt('tog:jorn:' + j.k, j.n, j.d, a.jorn.includes(j.k))).join('')}</div></div>
+    </div>${nav(a.areas.length > 0 && a.jorn.length > 0)}</div>`;
+
+  if (k === 'nota') return `<div class="card">${eyeb('BLOCO 02', 'Nota do redesign', 1)}
+    <h2 class="q">${rev ? 'Pelo que você viu dele, que nota você dá para o redesign?' : 'Que nota você dá para o redesign do 1Doc?'}</h2>
+    <p class="q-help">De 0 a 10. Pode usar o teclado.</p>
+    <div class="nps">${Array.from({ length: 11 }, (_, n) => `<button class="${a.nota === n ? 'on' : ''}" data-act="nota:${n}">${n}</button>`).join('')}</div>
+    <div class="scale-ends"><span>0 · muito ruim</span><span>10 · excelente</span></div>
+    ${a.nota !== null && !rev ? `<div class="fields" style="margin-top:28px"><div>
+      <label class="f-label">Qual o principal motivo da sua nota? <span>· obrigatório</span></label>
+      <textarea class="inp" data-act="txt:notaWhy" placeholder="Escreva do jeito que você falaria para um colega.">${esc(a.notaWhy)}</textarea>
+      <div class="charc">${a.notaWhy.length} caracteres · mínimo 15</div></div></div>` : ''}
+    ${nav(a.nota !== null && (rev || a.notaWhy.trim().length >= 15))}</div>`;
+
+  if (k === 'umux') return `<div class="card">${eyeb('BLOCO 02', 'Usabilidade · UMUX-Lite', 1)}
+    <h2 class="q">Duas afirmações sobre o redesign. O quanto você concorda?</h2>
+    <p class="q-help">Estas duas geram um índice comparável com benchmark de mercado. São as que dizem, em número defensável, se o redesign entregou o que prometeu.</p>
+    <div class="lik-row"><div class="lik-row-h"><b>O redesign do 1Doc tem as funcionalidades que eu preciso para fazer meu trabalho.</b></div>
+      ${likert('u1', a.u1, 'Discordo totalmente', 'Concordo totalmente')}</div>
+    <div class="lik-row"><div class="lik-row-h"><b>O redesign do 1Doc é fácil de usar.</b></div>
+      ${likert('u2', a.u2, 'Discordo totalmente', 'Concordo totalmente')}</div>
+    ${nav(a.u1 && a.u2)}</div>`;
+
+  if (k === 'legado') return `<div class="card">${eyeb('BLOCO 02', 'Nova vs. anterior', 1)}
+    <h2 class="q">Comparando o redesign com a versão anterior, item por item:</h2>
+    <p class="q-help">Esta é a pergunta central do redesign e ela tem prazo de validade — em algumas ondas ninguém vai lembrar da versão antiga com precisão. Responda pelo que você sente hoje.</p>
+    <div class="mx-head"><div></div><div><span>Melhor no redesign</span><span>Igual</span><span>Melhor na anterior</span></div></div>
+    ${DIMS.map(d => `<div class="mx-row">
+      <div><b>${d.n}</b><small>${d.d}</small></div>
+      <div class="mx-opts">
+        <button class="mup ${a.legado[d.k] === 1 ? 'on' : ''}" data-act="dim:${d.k}:1">Melhor</button>
+        <button class="meq ${a.legado[d.k] === 0 ? 'on' : ''}" data-act="dim:${d.k}:0">Igual</button>
+        <button class="mdn ${a.legado[d.k] === -1 ? 'on' : ''}" data-act="dim:${d.k}:-1">Pior</button>
+      </div></div>`).join('')}
+    <div class="fields" style="margin-top:24px"><div>
+      <label class="f-label">Tem algo que era melhor na versão anterior? <span>· opcional, mas é a resposta mais útil desta tela</span></label>
+      <textarea class="inp" data-act="txt:legadoWorse" placeholder="Se não houver, pode deixar em branco.">${esc(a.legadoWorse)}</textarea></div></div>
+    ${nav(DIMS.every(d => a.legado[d.k] !== undefined))}</div>`;
+
+  if (k === 'ces') {
+    const js = JORN.filter(j => a.jorn.includes(j.k));
+    return `<div class="card">${eyeb('BLOCO 03', 'Esforço · CES', 1)}
+      <h2 class="q">Quanto esforço cada tarefa exige no redesign?</h2>
+      <p class="q-help">Uma tela pode ficar mais bonita e ainda assim custar mais caro de usar. É isso que esta pergunta pega.</p>
+      ${js.map(j => `<div class="lik-row"><div class="lik-row-h"><b>${j.n}</b><span>${j.d}</span></div>
+        ${likert('ces:' + j.k, a.ces[j.k], 'Muito esforço', 'Muito pouco esforço')}</div>`).join('')}
+      ${nav(js.every(j => a.ces[j.k]))}</div>`;
+  }
+
+  if (k === 'areas') {
+    const ms = a.areas.filter(m => AREAS_RD.includes(m));
+    return `<div class="card">${eyeb('BLOCO 03', 'Áreas · rotativo')}
+      <h2 class="q">Dê uma nota para cada área do redesign.</h2>
+      <p class="q-help">Só as áreas que já mudaram de layout. É aqui que a gente descobre qual parte do redesign está puxando a média para baixo.</p>
+      ${ms.length ? ms.map(m => `<div class="lik-row"><div class="lik-row-h"><b>${m}</b></div>
+        ${likert('sat:' + m, a.sat[m], 'Muito insatisfeito', 'Muito satisfeito')}</div>`).join('')
+        : `<div class="callout">Você não marcou nenhuma área que já está no redesign. Sem problema, siga para a pergunta abaixo.</div>`}
+      <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--border)">
+        <div class="eyebrow" style="margin-bottom:9px">Andar entre os dois layouts</div>
+        <label class="f-label">A criação de processos e o Administrativo continuam no layout antigo. Quando você sai do redesign e entra em uma dessas telas, o que acontece?</label>
+        <div class="opts">${ADMIN_ATRITO.map(x => opt('admin:' + x.v, x.n, x.d, a.admin === x.v, true)).join('')}</div>
+        ${a.admin >= 2 ? `<div class="fields" style="margin-top:16px"><div>
+          <label class="f-label">O que exatamente atrapalha?</label>
+          <textarea class="inp" data-act="txt:adminWhy" placeholder="Ex.: perco onde estava, os menus estão em outro lugar, minha equipe acha que deu erro.">${esc(a.adminWhy)}</textarea></div></div>` : ''}
+      </div>
+      ${nav(ms.every(m => a.sat[m]) && a.admin !== null)}</div>`;
+  }
+
+  if (k === 'risco') return `<div class="card">${eyeb('BLOCO 03', 'Risco de reversão', 1)}
+    <h2 class="q">Você já pensou em desativar o redesign e voltar?</h2>
+    <p class="q-help">Perguntamos sem rodeio porque essa intenção aparece antes da ação — e é onde ainda dá tempo de agir.</p>
+    <div class="opts">${RISCO.map(x => opt('risco:' + x.v, x.n, x.d, a.risco === x.v, true)).join('')}</div>
+    ${a.risco > 0 ? `<div class="fields" style="margin-top:22px"><div>
+      <label class="f-label">O que fez você pensar nisso? <span>· obrigatório</span></label>
+      <textarea class="inp" data-act="txt:riscoWhy" placeholder="Seja específico se puder.">${esc(a.riscoWhy)}</textarea>
+      <div class="charc">${a.riscoWhy.length} caracteres · mínimo 15</div></div></div>` : ''}
+    ${nav(a.risco !== null && (a.risco === 0 || a.riscoWhy.trim().length >= 15))}</div>`;
+
+  if (k === 'prioridade') return `<div class="card">${eyeb('BLOCO 03', 'Prioridade')}
+    <h2 class="q">Se você pudesse mudar uma coisa no redesign, qual seria?</h2>
+    <p class="q-help">Uma só. O limite é de propósito: é ele que revela a prioridade de verdade.</p>
+    <div class="fields">
+      <div><textarea class="inp" style="min-height:110px" data-act="txt:oneThing" placeholder="A que mais te incomoda ou a que mais te ajudaria.">${esc(a.oneThing)}</textarea>
+        <div class="charc">${a.oneThing.length} caracteres · mínimo 5</div></div>
+      <div><label class="f-label">O que mais te faz perder tempo hoje? <span>· opcional</span></label>
+        <textarea class="inp" data-act="txt:timeSink" placeholder="O momento em que você percebe que está perdendo tempo.">${esc(a.timeSink)}</textarea></div>
+    </div>${nav(a.oneThing.trim().length >= 5)}</div>`;
+
+  if (k === 'encerrar') return `<div class="card">${eyeb('BLOCO 04', 'Encerramento')}
+    <h2 class="q">Topa conversar 30 minutos com a equipe de produto?</h2>
+    <p class="q-help">Por onda a gente conversa com até 10 pessoas, escolhidas pelo que responderam aqui — não por sorteio.${rev ? ' Quem voltou para a versão anterior entra no topo da fila.' : ''}</p>
+    <div class="opts">
+      ${opt('talk:1', 'Sim, podem me chamar', 'Você entra na fila de entrevistas desta onda', a.talk === true, true)}
+      ${opt('talk:0', 'Não, prefiro só responder', 'Sua resposta continua valendo igual', a.talk === false, true)}
+    </div>
+    ${a.talk ? `<div class="fields" style="margin-top:26px">
+      <div><label class="f-label">Nome</label><input class="inp" data-act="txt:nome" value="${esc(a.nome)}" placeholder="Como podemos te chamar"></div>
+      <div><label class="f-label">E-mail de contato</label><input class="inp" data-act="txt:email" value="${esc(a.email)}" placeholder="nome@orgao.gov.br"></div>
+      <div class="callout">Nome e e-mail ficam separados das respostas na análise. Servem para marcar a conversa e registrar sua participação no programa de embaixadores.</div>
+    </div>` : ''}
+    ${nav(a.talk !== null && (!a.talk || (a.nome.trim() && a.email.includes('@'))), false, 'Enviar respostas')}</div>`;
+
+  return receiptHTML();
+}
+
+function receiptHTML() {
+  const a = S.a, lv = nivel(S.streak), rev = a.status === 'voltou';
+  const sug = [a.oneThing, a.timeSink, a.revTraria, a.revPonto, a.legadoWorse].filter(x => x && x.trim());
+  return `<div class="receipt">
+    <div class="rec-top"><div class="eyebrow">Respostas enviadas</div>
+      <h2>Recebido. ${rev ? 'Seu caso vai direto para a fila de análise.' : `Suas respostas entram na análise da onda ${WAVE_NOW}.`}</h2>
+      <p>Guarde o código abaixo: é com ele que você acompanha o andamento das suas sugestões.</p></div>
+    <div class="rec-body">
+      <div class="rec-line"><span>Código de acompanhamento</span><b>${S.proto}</b></div>
+      <div class="rec-line"><span>Onda</span><b>${WAVE_NOW}</b></div>
+      <div class="rec-line"><span>Órgão</span><b>${esc(a.cliente?.nome || '—')} · #${esc(a.cliente?.id || '')}</b></div>
+      <div class="rec-line"><span>Versão em uso</span><b>${rev ? 'voltou para a anterior' : a.status === 'nao_sei' ? 'não identificada' : 'redesign ativo'}</b></div>
+      <div class="rec-line"><span>Nota dada ao redesign</span><b>${a.nota ?? '—'} de 10</b></div>
+      <div class="rec-line"><span>Sugestões registradas</span><b>${sug.length}</b></div>
+      <div class="rec-line"><span>Entrevista</span><b>${a.talk ? (rev ? 'topo da fila desta onda' : 'na fila desta onda') : 'não'}</b></div>
+      <div class="badge-lv"><i>${lv.i}</i> Embaixador ${lv.n} · ${plur(S.streak, 'onda seguida', 'ondas seguidas')}</div>
+      <p style="font-size:13.5px;color:var(--ink-soft);max-width:56ch">${lv.d}. Respondendo a próxima onda você sobe de nível. Quem chega em Ouro entra na sessão fechada de roadmap.</p>
+      <div class="steps-next">
+        <div class="eyebrow" style="margin-bottom:12px">O que acontece agora</div>
+        <div class="sn"><i>1</i><div>Suas respostas entram no cálculo do índice do redesign desta onda, em até 2 semanas de campo.</div></div>
+        <div class="sn"><i>2</i><div>${rev ? 'O motivo da sua volta é classificado e comparado com os das outras reversões da onda.' : 'Suas sugestões são classificadas por tema e comparadas com as das ondas anteriores.'}</div></div>
+        <div class="sn"><i>3</i><div>Você recebe, no fechamento da onda, o que entrou no roadmap e o que ficou de fora — com o motivo.</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-gho" data-act="restart">Responder como outra pessoa</button>
+        <a class="btn btn-txt" href="#/painel" style="text-decoration:none">Abrir o painel da equipe →</a></div>
+    </div></div>`;
+}
+
+async function submitSurvey() {
+  const a = S.a, now = new Date();
+  const rec = {
+    id: S.proto, wave: WAVE_NOW, at: now.toISOString(),
+    cliente: a.cliente, tipo: a.cliente?.tipo || 'Outro',
+    papel: a.papel === 'Outro' ? (a.papelOutro || 'Outro') : a.papel,
+    tempo: a.tempo, freq: a.freq, status: a.status,
+    jorn: a.jorn, areas: a.areas, nota: a.nota, notaWhy: a.notaWhy.trim(),
+    u1: a.u1, u2: a.u2, legado: a.legado, legadoWorse: a.legadoWorse.trim(),
+    ces: a.ces, sat: a.sat, admin: a.admin, adminWhy: a.adminWhy.trim(),
+    risco: a.risco, riscoWhy: a.riscoWhy.trim(),
+    oneThing: a.oneThing.trim(), timeSink: a.timeSink.trim(),
+    revUsou: a.revUsou, revQuando: a.revQuando, revMotivos: a.revMotivos,
+    revPonto: a.revPonto.trim(), revTraria: a.revTraria.trim(), revRecomenda: a.revRecomenda,
+    talk: !!a.talk, nome: a.nome.trim(), email: a.email.trim(), seed: false
+  };
+  const ok = await DB.set(RK + S.proto, rec, true);
+  S.sent = true; await DB.del(DRAFT, false);
+  if (!ok && HAS_STORE) toast('Não conseguimos gravar agora. Tente novamente em instantes.');
+}
+
+function renderPesquisa() {
+  const f = flow(), total = S.a.status ? f.length : 14;
+  const pct = Math.min(100, (S.step / (total - 1)) * 100);
+  el('app').innerHTML = `<div class="pub">
+    ${!HAS_STORE ? `<div class="warn-bar">Armazenamento não disponível neste contexto — as respostas ficam apenas nesta aba, para demonstração.</div>` : ''}
+    <div class="pub-top"><div class="pub-top-in">
+      <div class="brand"><span class="brand-mark">1D</span>1Doc<span class="brand-sub">Pesquisa do redesign</span></div>
+      <div class="top-right">
+        ${S.proto ? `<span class="proto-chip">${S.proto}</span>` : ''}
+        <span class="eyebrow">${isLast() ? 'concluído' : `tela ${S.step + 1} de ${total}`}</span>
+      </div></div><div class="pub-progress"><i style="width:${pct}%"></i></div></div>
+    <div class="pub-body" ${isLast() ? 'style="grid-template-columns:1fr;max-width:800px"' : ''}>
+      ${isLast() ? '' : trailHTML()}<div class="${S.anim ? 'enter' : ''}">${stepHTML()}</div></div>
+  </div>`;
+  const t = el('cq') || el('app').querySelector('textarea, input.inp');
+  if (t && S.step > 0 && !isLast()) setTimeout(() => t.focus({ preventScroll: true }), 60);
+}
+/* ============================================================
+   7 · DADOS DE DEMONSTRAÇÃO — 3 ondas (migração é recente)
+   ============================================================ */
+const NOTA_WHY = [
+ 'A tela ficou muito mais limpa e eu acho as coisas mais rápido do que antes.',
+ 'Gostei do visual, mas ficou mais lento para carregar a lista de processos.',
+ 'O Inbox mudou minha rotina, hoje eu vejo o que é meu sem precisar procurar.',
+ 'Está melhor, mas tive que reaprender onde ficava tudo e isso custou duas semanas.',
+ 'Muitos cliques a mais para fazer o que eu fazia direto na versão antiga.',
+ 'A Central de atendimento ficou confusa, meu pessoal reclama todo dia.',
+ 'Assinar documento ficou bem mais simples, a fila de assinatura resolveu.',
+ 'Bonito, mas minha equipe mais antiga não se adaptou e eu virei o suporte deles.',
+ 'A busca está melhor, encontro por interessado agora e não só por número.',
+ 'Trava quando tem muita coisa aberta, principalmente no fim do mês.',
+ 'Melhor em tudo, menos na hora de ir no Administrativo, que continua do jeito antigo.',
+ 'A Central de ações demora para abrir e é justamente por onde eu começo o dia.',
+ 'Recomendo. A leitura da tela ficou muito melhor para quem passa o dia aqui.',
+ 'Faltou treinamento antes de ligar. A versão é boa, a virada foi ruim.',
+ 'A leitura do processo ficou melhor, mas conferir o que já foi feito ainda dá trabalho.',
+ 'Não vi ganho real no meu trabalho, as coisas só mudaram de lugar.',
+ 'A Minha conta ficou clara, finalmente entendo quais permissões eu tenho.',
+ 'Encontro tudo, mas o sistema parece pesado no computador antigo do setor.'
+];
+const ONE = [
+ 'Deixar a Central de ações abrir mais rápido.',
+ 'Voltar o atalho de encaminhar direto da lista.',
+ 'Trazer o Administrativo para o redesign.',
+ 'Deixar eu salvar os filtros que uso todo dia.',
+ 'Reduzir os cliques para concluir uma tarefa simples.',
+ 'Melhorar a Central de atendimento, é a tela mais confusa.',
+ 'Um guia dentro do sistema mostrando o que mudou de lugar.',
+ 'Deixar a lista de processos mais densa, cabe pouca coisa na tela.',
+ 'Melhorar o desempenho em computador mais antigo.',
+ 'Poder escolher quais notificações eu quero receber.',
+ 'Um jeito de ver o que está pendente da minha equipe, não só o meu.',
+ 'Busca por assunto e por interessado, não só por número.',
+ 'Deixar assinar vários documentos de uma vez na fila.',
+ 'Manter o mesmo caminho de navegação do Administrativo, para não confundir.'
+];
+const SINK = [
+ 'Esperar a Central de ações carregar no começo do dia.',
+ 'Procurar onde uma função foi colocada no redesign.',
+ 'Explicar para colega onde ficam as coisas agora.',
+ 'Ir e voltar entre o redesign e as telas antigas.',
+ 'Assinar documento por documento em vez de tudo de uma vez.',
+ 'Filtrar a lista de novo cada vez que eu volto para ela.',
+ 'Repetir dados que o sistema já tem no cadastro.',
+ 'Conferir se o processo foi para o destino certo.',
+ 'Abrir várias telas para juntar uma informação só.',
+ 'Esperar a lista de processos abrir quando tem muita coisa.',
+ 'Achar um processo antigo que a busca não encontra.',
+ ''
+];
+const WORSE = [
+ 'A lista antiga mostrava mais linhas na tela de uma vez.',
+ 'Na antiga eu encaminhava direto da lista, sem abrir o processo.',
+ 'A antiga era mais rápida, mesmo sendo feia.',
+ 'Os atalhos de teclado da versão antiga.',
+ 'O menu antigo tinha tudo à vista, não precisava abrir nada.',
+ 'Nada, a nova é melhor em tudo que eu uso.',
+ 'A antiga tinha um resumo do processo que eu usava muito.',
+ '',
+ 'Na antiga o Administrativo e o resto tinham a mesma cara.',
+ 'A busca antiga aceitava colar uma lista de números.'
+];
+const RISCO_WHY = [
+ 'Minha equipe passou duas semanas reclamando que as coisas mudaram de lugar.',
+ 'A lentidão da Central de ações me fez cogitar, mas melhorou depois.',
+ 'Perdi uma manhã tentando achar uma função e pensei em desistir.',
+ 'O pessoal mais antigo do setor pediu para voltar.',
+ 'Cheguei a pensar quando descobri que o Administrativo continua na versão antiga.',
+ 'Nos dias de pico o sistema pesa e eu penso em voltar.',
+ 'Pensei nos primeiros dias, hoje não penso mais.',
+ 'A quantidade de cliques em tarefa repetitiva me fez considerar.'
+];
+const REV_PONTO = [
+ 'Não achei mais o botão de encaminhar direto da lista. Eu faço isso cinquenta vezes por dia.',
+ 'A tela de processos demorava muito para abrir no computador do protocolo.',
+ 'A Central de atendimento não tem o filtro que eu uso para separar por secretaria.',
+ 'Meu time de cinco pessoas não conseguiu se adaptar em duas semanas e o atendimento atrasou.',
+ 'Deu erro na assinatura com certificado e eu não podia parar o expediente para testar.',
+ 'A lista mostrava menos processos por tela e eu perdia o panorama do dia.',
+ 'Não consegui mais colar uma lista de números na busca, que era como eu conferia o lote.',
+ 'Ninguém do setor tinha sido treinado quando o redesign entrou.'
+];
+const REV_TRARIA = [
+ 'Ter o encaminhar direto da lista, sem abrir cada processo.',
+ 'Resolver a lentidão. Se abrir rápido, eu volto no mesmo dia.',
+ 'Trazer os filtros que existiam na Central de atendimento.',
+ 'Um treinamento de uma hora para a equipe antes de religar.',
+ 'Corrigir a assinatura com certificado e me avisar quando estiver ok.',
+ 'Deixar a lista mais densa, com opção de ver mais linhas.',
+ 'Aceitar colar lista de números na busca.',
+ 'Trazer o Administrativo junto, para não ter duas caras no mesmo sistema.'
+];
+const ADMIN_WHY = [
+ 'Muda a navegação e eu perco onde estava.',
+ 'Parece outro sistema, tenho que reaprender no meio da tarefa.',
+ 'Meu pessoal acha que deu erro quando a tela muda de cara.',
+ 'Os menus não estão no mesmo lugar, atrasa tudo.',
+ 'Fico em dúvida se estou no lugar certo.'
+];
+const NOMES = ['Ana Ribeiro', 'Carlos Menezes', 'Débora Lopes', 'Eduardo Faria', 'Fernanda Alves',
+ 'Gustavo Pires', 'Helena Costa', 'Igor Sampaio', 'Juliana Reis', 'Marcelo Dutra', 'Natália Cunha',
+ 'Paulo Vieira', 'Rita Nogueira', 'Sérgio Amaral', 'Tatiane Melo', 'Vitor Andrade'];
+
+const DIMOFF = { aparencia: .55, clareza: .38, achar: .22, cliques: -.05, velocidade: -.45, aprender: -.55 };
+const JOFF = { achar: 0, analisar: .3, assinar: .5, pendencias: .9, atender: -.6 };
+function areaOff(w, m) {
+  const b = { 'Inbox': .9, 'Processos': 0, 'Assinaturas': 0, 'Fila de assinatura': .5,
+    'Central de ações': -.7, 'Central de atendimento': -.6, 'Minha conta': .8 }[m] || 0;
+  if (w === 2 && m === 'Central de ações') return b + 1.1;     // entrou a correção de desempenho
+  if (w === 2 && m === 'Central de atendimento') return b - .3; // segue sendo a pior
+  return b;
+}
+const cl7 = v => Math.max(1, Math.min(7, Math.round(v)));
+/* dispersão determinística: dado real não vem em coluna uniforme */
+function jit(i, k) { let h = i * 131 + 7; for (const c of k) h = (h * 31 + c.charCodeAt(0)) % 9973; return ((h % 71) / 70 - 0.5) * 0.72; }
+const sgn = v => v > .35 ? 1 : v < -.35 ? -1 : 0;
+const AREASETS = [
+ ['Inbox', 'Processos', 'Assinaturas'],
+ ['Inbox', 'Processos', 'Central de ações', 'Fila de assinatura', 'Minha conta'],
+ ['Inbox', 'Processos', 'Central de ações'],
+ ['Processos', 'Assinaturas', 'Fila de assinatura', 'Minha conta'],
+ ['Inbox', 'Processos', 'Central de ações', 'Minha conta'],
+ ['Inbox', 'Central de atendimento', 'Processos'],
+ ['Central de atendimento', 'Inbox', 'Processos']
+];
+/* quem também usa as telas que continuam no layout antigo */
+const LEGSETS = [['Criar novos processos'], ['Administrativo'], ['Criar novos processos', 'Administrativo'], []];
+const JORNSETS = [
+ ['achar', 'analisar', 'pendencias'],
+ ['achar', 'pendencias', 'assinar'],
+ ['achar', 'analisar', 'pendencias', 'assinar'],
+ ['assinar', 'achar', 'pendencias'],
+ ['achar', 'pendencias'],
+ ['achar', 'analisar', 'atender', 'pendencias'],
+ ['atender', 'achar', 'pendencias']
+];
+
+/* [w, cliIdx, papelIdx, nota, u1, u2, prefB, cesB, satB, admin, risco, riscoW, nps, whyI, oneI, sinkI, worseI, talk, naoSei] */
+const SEED_USA = [
+ [0,3,0,7,4,4,.15,4,4,2,1,0,8,3,6,1,4,1,0],[0,17,2,6,4,3,.05,4,4,3,1,2,7,4,1,1,1,0,0],
+ [0,41,1,8,5,5,.35,5,5,1,0,6,9,0,3,5,5,1,0],[0,63,5,5,3,3,-.1,3,4,3,2,3,6,7,6,2,4,1,0],
+ [0,88,4,7,4,4,.2,4,4,2,1,4,8,10,2,3,8,0,0],[0,104,9,6,4,4,0,4,3,2,1,7,7,5,5,8,6,1,0],
+ [0,126,3,7,5,4,.25,4,4,1,0,6,8,6,12,4,0,0,0],[0,151,6,6,4,4,.1,4,4,2,1,0,7,13,6,2,2,0,0],
+ [0,178,8,8,5,5,.3,5,5,0,0,6,9,8,11,10,5,1,0],[0,203,2,5,3,4,-.05,4,4,3,2,5,6,9,8,9,2,0,1],
+ [1,7,0,8,5,5,.3,5,5,1,0,6,9,2,1,0,1,1,0],[1,22,1,7,5,4,.25,4,4,2,1,1,8,1,0,0,0,0,0],
+ [1,48,4,9,6,5,.5,5,5,1,0,6,10,12,3,5,5,1,0],[1,71,5,6,4,4,.1,4,4,3,1,4,7,5,5,3,8,1,0],
+ [1,95,2,8,5,5,.35,5,5,1,0,6,9,8,11,7,0,0,0],[1,112,0,7,5,5,.3,5,4,2,1,7,8,4,4,4,1,1,0],
+ [1,139,3,8,6,5,.4,5,5,0,0,6,9,16,13,6,5,0,0],[1,164,6,7,4,5,.2,4,5,2,1,2,8,14,9,6,6,0,0],
+ [1,191,8,9,6,6,.55,6,5,1,0,6,10,6,12,4,5,1,0],[1,216,9,6,4,4,.05,4,4,3,2,3,7,11,0,0,4,1,0],
+ [1,244,2,7,5,4,.25,5,4,2,1,0,8,17,8,1,2,0,1],
+ [2,11,0,9,6,6,.55,5,6,1,0,6,10,0,3,5,5,1,0],[2,29,1,8,6,5,.45,5,5,2,0,6,9,2,1,0,0,0,0],
+ [2,55,4,9,6,6,.6,6,6,1,0,6,10,12,2,3,5,0,0],[2,79,5,7,5,5,.3,5,5,2,1,4,8,10,2,3,8,1,0],
+ [2,101,2,8,6,5,.45,5,5,1,0,6,9,16,13,6,0,0,0],[2,119,0,8,5,5,.4,5,5,1,1,6,9,8,11,10,0,1,0],
+ [2,147,3,9,7,6,.6,6,6,0,0,6,10,6,12,4,5,0,0],[2,172,6,7,5,5,.25,4,5,2,1,1,8,5,5,2,6,1,0],
+ [2,199,8,10,7,7,.7,6,6,0,0,6,10,12,10,11,5,1,0],[2,225,9,7,5,4,.2,5,4,3,1,5,8,17,8,9,2,0,0],
+ [2,251,2,8,6,6,.5,5,5,1,0,6,9,14,4,6,7,0,1],[2,268,1,6,4,4,.1,4,4,2,2,7,7,4,4,4,1,1,0]
+];
+/* [w, cliIdx, papelIdx, nota, usouIdx, quandoIdx, motivosIdx[], pontoI, trariaI, recomIdx, talk] */
+const SEED_REV = [
+ [0,26,0,3,1,2,[0,3],0,0,2,1],[0,58,5,4,2,2,[1,4],1,1,2,1],[0,133,6,2,0,2,[0,5,6],3,3,2,0],
+ [1,84,0,4,2,2,[0,3],0,0,1,1],[1,208,9,3,1,2,[2,5],2,2,2,1],
+ [2,66,4,5,3,1,[4,2],4,4,1,1],[2,237,0,4,0,0,[7,5],7,7,1,0]
+];
+
+function buildSeed() {
+  const out = [];
+  SEED_USA.forEach((t, idx) => {
+    const [w, ci, pi, nota, u1, u2, pb, cb, sb, admin, risco, rw, nps, wi, oi, si, woi, talk, naoSei] = t;
+    const areasRD = AREASETS[pi % AREASETS.length], jorn = JORNSETS[pi % JORNSETS.length];
+    const areas = [...areasRD, ...LEGSETS[idx % LEGSETS.length]];
+    const legado = {}; DIMS.forEach(d => { legado[d.k] = sgn(pb + DIMOFF[d.k] + jit(idx, d.k) * 2.2); });
+    const ces = {}; jorn.forEach(j => { ces[j] = cl7(cb + JOFF[j] + jit(idx, j) * 1.7); });
+    const sat = {}; areasRD.forEach(m => { sat[m] = cl7(sb + areaOff(w, m) + jit(idx, m) * 1.7); });
+    const c = CLIENTES[ci % CLIENTES.length];
+    out.push({
+      id: 'IRD-' + WAVES[w] + '/' + String(1000 + idx * 29).slice(0, 4), wave: WAVES[w],
+      at: new Date(2026, w * 3 + 1, 8 + (idx % 12)).toISOString(),
+      cliente: c, tipo: c.tipo, papel: PAPEIS[pi], tempo: TEMPO[Math.min(3, w + (idx % 2))],
+      freq: FREQ[idx % 4], status: naoSei ? 'nao_sei' : 'usa',
+      jorn, areas, nota, notaWhy: NOTA_WHY[wi], u1, u2, legado, legadoWorse: WORSE[woi],
+      ces, sat, admin, adminWhy: admin >= 2 ? ADMIN_WHY[idx % ADMIN_WHY.length] : '',
+      risco, riscoWhy: risco > 0 ? RISCO_WHY[rw] : '',
+      oneThing: ONE[oi], timeSink: SINK[si],
+      revUsou: '', revQuando: '', revMotivos: [], revPonto: '', revTraria: '', revRecomenda: '',
+      talk: !!talk, nome: talk ? NOMES[idx % NOMES.length] : '', email: talk ? 'contato@orgao.gov.br' : '', seed: true
+    });
+  });
+  SEED_REV.forEach((t, idx) => {
+    const [w, ci, pi, nota, ui, qi, mots, poi, tri, rci, talk] = t;
+    const c = CLIENTES[ci % CLIENTES.length];
+    out.push({
+      id: 'IRD-' + WAVES[w] + '/R' + (900 + idx * 13), wave: WAVES[w],
+      at: new Date(2026, w * 3 + 1, 14 + idx).toISOString(),
+      cliente: c, tipo: c.tipo, papel: PAPEIS[pi], tempo: TEMPO[Math.min(2, w)],
+      freq: FREQ[idx % 3], status: 'voltou', jorn: [], areas: [],
+      nota, notaWhy: '', u1: null, u2: null, legado: {}, legadoWorse: '',
+      ces: {}, sat: {}, admin: null, adminWhy: '', risco: null, riscoWhy: '',
+      oneThing: '', timeSink: '',
+      revUsou: REV_TEMPO[ui], revQuando: REV_QUANDO[qi], revMotivos: mots.map(m => REV_MOTIVOS[m]),
+      revPonto: REV_PONTO[poi], revTraria: REV_TRARIA[tri], revRecomenda: ['Sim', 'Depende', 'Não'][rci],
+      talk: !!talk, nome: talk ? NOMES[(idx + 9) % NOMES.length] : '',
+      email: talk ? 'contato@orgao.gov.br' : '', seed: true
+    });
+  });
+  return out;
+}
+
+/* ============================================================
+   8 · GRÁFICOS
+   ============================================================ */
+function lineChart(waves, series, min = 40) {
+  const W = 760, H = 250, L = 40, R = 20, T = 22, B = 34;
+  const iw = W - L - R, ih = H - T - B, n = waves.length;
+  const x = i => L + (n === 1 ? iw / 2 : i * iw / (n - 1));
+  const y = v => T + ih - ((Math.max(min, v) - min) / (100 - min)) * ih;
+  let g = '';
+  [0, 1, 2, 3, 4].map(i => Math.round(min + (100 - min) * i / 4)).forEach(v => {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--d-border)"/>
+      <text x="${L - 8}" y="${y(v) + 4}" fill="var(--d-ink-faint)" font-size="10" text-anchor="end">${v}</text>`;
+  });
+  waves.forEach((w, i) => {
+    const an = i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle';
+    g += `<text x="${x(i)}" y="${H - 12}" fill="var(--d-ink-faint)" font-size="10.5" text-anchor="${an}">${w}</text>`;
+  });
+  let p = '';
+  series.forEach(s => {
+    const pts = s.vals.map((v, i) => `${x(i)},${y(v)}`).join(' ');
+    if (s.area) p += `<polygon points="${x(0)},${y(min)} ${pts} ${x(n - 1)},${y(min)}" fill="${s.c}" opacity=".1"/>`;
+    p += `<polyline points="${pts}" fill="none" stroke="${s.c}" stroke-width="${s.w || 1.6}"
+      stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="4 4"' : ''}/>`;
+    if (s.dots) s.vals.forEach((v, i) => {
+      const da = i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle';
+      p += `<circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(--d-surface)" stroke="${s.c}" stroke-width="2"/>
+        <text x="${x(i)}" y="${y(v) - 13}" fill="${s.c}" font-size="11.5" font-weight="600" text-anchor="${da}">${v}</text>`;
+    });
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Série histórica do índice do redesign">${g}${p}</svg>`;
+}
+function spark(vals, c) {
+  const W = 96, H = 34, mn = Math.min(...vals), mx = Math.max(...vals), rg = mx - mn || 1;
+  const pts = vals.map((v, i) => `${i * W / (Math.max(1, vals.length - 1))},${H - 4 - ((v - mn) / rg) * (H - 10)}`).join(' ');
+  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="${c}" stroke-width="1.6" opacity=".9"/></svg>`;
+}
+function delta(cur, prev, unit, inverso) {
+  if (prev == null) return `<span class="flat">— primeira onda</span>`;
+  const d = r1(cur - prev);
+  const bom = inverso ? d < -0.4 : d > 0.4, ruim = inverso ? d > 0.4 : d < -0.4;
+  const cls = bom ? 'up' : ruim ? 'down' : 'flat';
+  const ar = d > 0.4 ? '▲' : d < -0.4 ? '▼' : '■';
+  return `<span class="${cls}">${ar} ${d > 0 ? '+' : ''}${d}${unit || ''} vs onda anterior</span>`;
+}
+function hbars(rows, opts = {}) {
+  const max = Math.max(...rows.map(r => r.v), opts.max || 0.0001);
+  return `<div class="bars">${rows.map(r => `<div class="bar-row">
+    <div class="bar-top"><b>${r.n}</b>${r.chg != null ? `<span class="chg ${r.chgCls}">${r.chg}</span>` : ''}
+      <span class="n">${r.label}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, r.v / max * 100)}%;background:${r.c || 'var(--d-primary)'}"></div></div>
+    ${r.sub ? `<div class="bar-sub">${r.sub}</div>` : ''}</div>`).join('')}</div>`;
+}
+function stack100(rows) {
+  return `<div class="bars">${rows.map(r => {
+    const t = r.up + r.eq + r.dn || 1;
+    return `<div class="bar-row"><div class="bar-top"><b>${r.n}</b>
+      <span class="n" style="color:${r.up - r.dn > 0 ? 'var(--d-pos)' : r.up - r.dn < 0 ? 'var(--d-neg)' : 'var(--d-ink-faint)'}">${r.up - r.dn > 0 ? '+' : ''}${r1((r.up - r.dn) / t * 100)}</span></div>
+      <div class="bar-track" style="display:flex;height:12px">
+        <div style="width:${r.up / t * 100}%;background:var(--d-pos);opacity:.85"></div>
+        <div style="width:${r.eq / t * 100}%;background:var(--d-ink-faint);opacity:.45"></div>
+        <div style="width:${r.dn / t * 100}%;background:var(--d-neg);opacity:.85"></div>
+      </div>
+      <div class="bar-sub">${r.up} melhor · ${r.eq} igual · ${r.dn} pior</div></div>`;
+  }).join('')}</div>`;
+}
+
+/* ============================================================
+   9 · PAINEL
+   ============================================================ */
+const inTipo = r => S.tipoFilt === 'all' || r.tipo === S.tipoFilt;
+const byWave = w => S.data.filter(r => r.wave === w && inTipo(r));
+const statsAll = () => WAVES.map(w => scoresFor(byWave(w)));
+
+function taxoCount(list) {
+  const m = {};
+  list.forEach(r => {
+    const txt = [r.notaWhy, r.oneThing, r.timeSink, r.legadoWorse, r.riscoWhy, r.adminWhy, r.revPonto, r.revTraria].join(' ');
+    new Set(classify(txt)).forEach(c => { if (c !== 'Não classificado') m[c] = (m[c] || 0) + 1; });
+  });
+  return Object.entries(m).sort((a, b) => b[1] - a[1]);
+}
+function cesByJorn(list) {
+  return JORN.map(j => { const v = list.map(r => r.ces?.[j.k]).filter(Boolean);
+    return { ...j, v: v.length ? r1(avg(v)) : null, cnt: v.length }; });
+}
+function satByArea(list) {
+  return AREAS_RD.map(m => { const v = list.map(r => r.sat?.[m]).filter(Boolean);
+    return { m, v: v.length ? r1(avg(v)) : null, cnt: v.length }; });
+}
+function dimCounts(list) {
+  return DIMS.map(d => ({ n: d.n,
+    up: list.filter(r => r.legado?.[d.k] === 1).length,
+    eq: list.filter(r => r.legado?.[d.k] === 0).length,
+    dn: list.filter(r => r.legado?.[d.k] === -1).length }));
+}
+
+function renderLogin() {
+  el('app').innerHTML = `<div class="dark"><div class="login-wrap"><div class="login">
+    <div class="brand"><span class="brand-mark">1D</span>1Doc<span class="brand-sub">Painel do redesign</span></div>
+    <h2>Entrar no painel da equipe</h2>
+    <p>Índice do redesign, comparação com a versão anterior, quem voltou para o legado e por quê.</p>
+    <input class="dk-inp" id="pw" type="password" placeholder="senha" autocomplete="current-password">
+    <div id="lerr"></div>
+    <button class="dk-btn pri" style="width:100%;margin-top:14px;padding:11px" data-act="login">Entrar</button>
+    <p class="hint">Senha de demonstração: <b class="mono">produto2026</b>. Esta checagem roda no navegador e serve para o protótipo — no sistema real o login precisa ser feito no servidor.</p>
+    <p class="hint" style="border:none;padding-top:8px"><a href="#/pesquisa" style="color:var(--d-primary);text-decoration:none">← Voltar para a pesquisa</a></p>
+  </div></div></div>`;
+  setTimeout(() => el('pw')?.focus(), 60);
+}
+
+function shell(inner) {
+  const seeded = S.data.some(r => r.seed);
+  const tipos = ['all', ...new Set(S.data.map(r => r.tipo))];
+  return `<div class="dark"><div class="dk-top"><div class="dk-top-in">
+    <div class="brand"><span class="brand-mark">1D</span>1Doc<span class="brand-sub">Painel do redesign · IRD</span></div>
+    <div class="top-right" style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <select class="dk-sel" data-act="wave">${WAVES.map(w => `<option ${S.waveSel === w ? 'selected' : ''}>${w}</option>`).join('')}</select>
+      ${seeded ? `<button class="dk-btn" data-act="clear">Limpar demonstração</button>` : ''}
+      <a class="dk-btn" href="#/pesquisa" style="text-decoration:none">Ver a pesquisa</a>
+      <button class="dk-btn" data-act="logout">Sair</button>
+    </div></div></div>
+    <div class="dk-body">
+      <div class="filters" style="margin-bottom:18px">
+        ${tipos.map(t => `<button class="chip ${S.tipoFilt === t ? 'on' : ''}" data-act="tipo:${t}">${t === 'all' ? 'Todos os tipos' : t}</button>`).join('')}
+      </div>
+      ${inner}</div></div>`;
+}
+
+function renderPainel() {
+  const wi = WAVES.indexOf(S.waveSel);
+  const cur = byWave(S.waveSel), prev = wi > 0 ? byWave(WAVES[wi - 1]) : [];
+  const sc = scoresFor(cur), sp = scoresFor(prev), all = statsAll();
+  const hist = k => all.map(s => s ? s[k] : 0);
+
+  if (!cur.length) { el('app').innerHTML = shell(`<div class="panel"><div class="empty">
+    <b>Nenhuma resposta neste corte</b><p>Troque a onda ou o tipo de organização.</p></div></div>`); return; }
+
+  const ativos = cur.filter(r => r.status !== 'voltou'), revs = cur.filter(r => r.status === 'voltou');
+  const kpi = (l, v, d, note, sk, c, hero, cls) => `<div class="kpi ${hero ? 'hero' : ''} ${cls || ''}">
+    ${spark(hist(sk), c)}<div class="kpi-l">${l}</div><div class="kpi-v">${v}</div>
+    <div class="kpi-d">${d}</div><div class="kpi-n">${note}</div></div>`;
+
+  /* reversão */
+  const revMot = {}; revs.forEach(r => r.revMotivos.forEach(m => { revMot[m] = (revMot[m] || 0) + 1; }));
+  const motRows = Object.entries(revMot).sort((a, b) => b[1] - a[1])
+    .map(([n, v]) => ({ n, v, label: `${v} de ${revs.length}`, c: 'var(--d-neg)' }));
+  const tempoRows = REV_TEMPO.map(t => { const v = revs.filter(r => r.revUsou === t).length;
+    return { n: t, v, label: `${v} de ${revs.length}`, c: t === 'Menos de um dia' || t === 'Alguns dias' ? 'var(--d-warn)' : 'var(--d-neg)' }; });
+  const revPorWave = WAVES.map((w, i) => ({ w, s: all[i] }));
+
+  /* áreas */
+  const sat = satByArea(cur), satP = Object.fromEntries(satByArea(prev).map(x => [x.m, x.v]));
+  const movers = sat.filter(x => x.v != null && satP[x.m] != null).map(x => ({ ...x, d: r1(x.v - satP[x.m]) }));
+  const up = movers.filter(m => m.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
+  const down = movers.filter(m => m.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
+  const ces = cesByJorn(cur), cesP = Object.fromEntries(cesByJorn(prev).map(x => [x.k, x.v]));
+  const taxCur = taxoCount(cur), taxPrev = Object.fromEntries(taxoCount(prev));
+
+  /* fila: revertido > nota baixa > risco > resto */
+  const rank = r => r.status === 'voltou' ? 0 : r.nota <= 6 ? 1 : r.risco > 0 ? 2 : r.nota <= 8 ? 3 : 4;
+  const fila = cur.filter(r => r.talk).sort((a, b) => rank(a) - rank(b));
+  const cmts = cur.filter(r => S.filt === 'all'
+    || (S.filt === 'rev' && r.status === 'voltou')
+    || (S.filt === 'risco' && r.risco > 0)
+    || (S.filt === 'det' && r.status !== 'voltou' && r.nota <= 6)
+    || (S.filt === 'pro' && r.nota >= 9));
+
+  el('app').innerHTML = shell(`
+  <div class="kpis">
+    ${kpi('IRD · índice do redesign', sc.ird, delta(sc.ird, sp?.ird), '35% usabilidade · 25% esforço · 20% nota · 20% preferência vs. anterior', 'ird', 'var(--d-primary)', 1)}
+    ${kpi('Nota do redesign', sc.nota, delta(sc.nota, sp?.nota), `média de ${plur(sc.n, 'resposta', 'respostas')}, incluindo quem voltou ao legado`, 'nota', 'var(--d-pos)')}
+    ${kpi('Taxa de reversão', sc.reversao + '<span style="font-size:20px;color:var(--d-ink-faint)">%</span>', delta(sc.reversao, sp?.reversao, ' pp', true), `${plur(sc.nRev, 'pessoa voltou', 'pessoas voltaram')} para a versão anterior`, 'reversao', 'var(--d-neg)', 0, 'rev-hero')}
+    ${kpi('Preferência vs. anterior', sc.pref, delta(sc.pref, sp?.pref), '50 = empate técnico com a versão antiga', 'pref', 'var(--d-primary)')}
+  </div>
+  <div class="kpis">
+    ${kpi('UMUX-Lite (escala SUS)', sc.umux, delta(sc.umux, sp?.umux), sc.umux >= 78 ? 'percentil 85 do benchmark' : sc.umux >= 68 ? 'acima da média de mercado (68)' : 'abaixo da média de mercado (68)', 'umux', 'var(--d-pos)')}
+    ${kpi('CES · esforço', sc.cesRaw + '<span style="font-size:19px;color:var(--d-ink-faint)">/7</span>', delta(sc.cesRaw, sp?.cesRaw), 'média das jornadas · maior = menos esforço', 'cesRaw', 'var(--d-warn)')}
+    ${kpi('Risco de reversão', sc.risco + '<span style="font-size:20px;color:var(--d-ink-faint)">%</span>', delta(sc.risco, sp?.risco, ' pp', true), 'de quem está com o redesign ativo já pensou em voltar', 'risco', 'var(--d-warn)')}
+    ${kpi('Atrito entre os dois layouts', sc.atrito + '<span style="font-size:20px;color:var(--d-ink-faint)">%</span>', delta(sc.atrito, sp?.atrito, ' pp', true), 'sentem a troca ao sair do redesign para uma tela antiga', 'atrito', 'var(--d-warn)')}
+  </div>
+
+  <div class="grid2">
+    <div class="panel"><div class="panel-h"><div><h3>Série histórica</h3>
+      <p>Três ondas desde a virada. O IRD é a linha cheia; as tracejadas são os sub-índices.</p></div>
+      <div class="right"><span class="tag" style="color:var(--d-primary)">━ IRD</span>
+      <span class="tag" style="color:var(--d-pos)">╌ UMUX</span><span class="tag" style="color:var(--d-warn)">╌ CES</span>
+      <span class="tag" style="color:var(--d-ink-faint)">╌ PREF</span></div></div>
+      ${lineChart(WAVES, [
+        { vals: hist('umux'), c: 'var(--d-pos)', dash: 1, w: 1.4 },
+        { vals: hist('ces'), c: 'var(--d-warn)', dash: 1, w: 1.4 },
+        { vals: hist('pref'), c: 'var(--d-ink-faint)', dash: 1, w: 1.2 },
+        { vals: hist('ird'), c: 'var(--d-primary)', w: 2.6, dots: 1, area: 1 }
+      ])}
+      <p style="font-size:12px;color:var(--d-ink-faint);margin-top:12px;line-height:1.5">O redesign andou ${r1(all[2].ird - all[0].ird)} pontos de IRD desde a virada, e a reversão foi de ${all[0].reversao}% para ${all[2].reversao}%. ${all[2].reversao < all[0].reversao
+        ? 'Índice subindo com reversão caindo é a leitura sadia: o redesign está segurando quem já estava nele.'
+        : 'Índice subindo com reversão subindo pede atenção — costuma significar que um grupo específico está desistindo enquanto o resto avança. Vale abrir o corte por tipo de organização.'}</p>
+    </div>
+    <div class="panel"><div class="panel-h"><div><h3>Reversão por onda</h3>
+      <p>Quem desativou o redesign. Dado de comportamento, não de opinião — por isso fica fora do índice composto.</p></div></div>
+      ${hbars(revPorWave.map(x => ({ n: x.w, v: x.s ? x.s.reversao : 0,
+        label: x.s ? x.s.reversao + '% · ' + x.s.nRev + ' de ' + x.s.n : '—',
+        c: 'var(--d-neg)' })), { max: 30 })}
+      <div class="panel-h" style="margin:22px 0 12px"><div><h3 style="font-size:14px">Tempo de uso antes de voltar</h3>
+        <p>Desistir em um dia é adaptação. Desistir em semanas é lacuna real.</p></div></div>
+      ${revs.length ? hbars(tempoRows, { max: revs.length }) : '<div class="empty"><p>Nenhuma reversão nesta onda.</p></div>'}
+    </div>
+  </div>
+
+  <div class="grid2b">
+    <div class="panel"><div class="panel-h"><div><h3>Redesign versus versão anterior, item por item</h3>
+      <p>Onde o redesign ganhou e onde perdeu. Só quem está com ele ativo responde. O número à direita é o saldo em pontos percentuais.</p></div>
+      <div class="right"><span class="tag">n=${ativos.length}</span></div></div>
+      ${stack100(dimCounts(ativos))}
+      <div class="legend"><span><i style="background:var(--d-pos)"></i>Melhor no redesign</span>
+        <span><i style="background:var(--d-ink-faint)"></i>Igual</span>
+        <span><i style="background:var(--d-neg)"></i>Melhor na anterior</span></div>
+    </div>
+    <div class="panel"><div class="panel-h"><div><h3>Motivos de quem voltou</h3>
+      <p>Marcação múltipla de ${plur(revs.length, 'pessoa', 'pessoas')} desta onda. Abaixo, o que cada uma disse que a traria de volta.</p></div></div>
+      ${revs.length ? hbars(motRows, { max: revs.length }) + `<div class="cmts" style="max-height:250px;margin-top:18px">
+        ${revs.map(r => `<div class="cmt det">
+          <div class="cmt-h"><span class="sc">nota ${r.nota}</span><span class="pill det">voltou</span>
+            <span class="who">${esc(r.papel)} · ${esc(r.cliente.nome)}</span></div>
+          <p>${esc(r.revPonto)}</p>
+          <p style="margin-top:9px;color:var(--d-ink-soft)"><b style="color:var(--d-pos)">Traria de volta:</b> ${esc(r.revTraria)}</p>
+          <div class="cmt-tags"><i>usou ${esc(r.revUsou).toLowerCase()}</i>${classify(r.revPonto + ' ' + r.revTraria).map(c => `<i>${c}</i>`).join('')}</div>
+        </div>`).join('')}</div>`
+        : '<div class="empty"><b>Nenhuma reversão nesta onda</b><p>Se isso se mantiver por duas ondas, a migração pode ser considerada estável.</p></div>'}
+    </div>
+  </div>
+
+  <div class="grid2b">
+    <div class="panel"><div class="panel-h"><div><h3>Áreas do redesign</h3>
+      <p>Satisfação por área, ${S.waveSel} contra a onda anterior.</p></div></div>
+      ${hbars(sat.filter(x => x.v != null).sort((a, b) => a.v - b.v).map(x => ({
+        n: x.m, v: x.v, label: x.v + '/7',
+        chg: satP[x.m] != null ? (r1(x.v - satP[x.m]) > 0 ? '+' : '') + r1(x.v - satP[x.m]) : null,
+        chgCls: satP[x.m] != null ? (x.v - satP[x.m] > 0.05 ? 'up' : x.v - satP[x.m] < -0.05 ? 'down' : 'flat') : '',
+        c: x.v < 4 ? 'var(--d-neg)' : x.v < 5.2 ? 'var(--d-warn)' : 'var(--d-pos)'
+      })), { max: 7 })}
+      ${up.length || down.length ? `<div class="panel-h" style="margin:22px 0 12px"><div><h3 style="font-size:14px">O que melhorou e o que piorou</h3></div></div>
+      <div class="movers">${[...up, ...down].map(m => `<div class="mv">
+        <span class="mv-ar ${m.d > 0 ? 'up' : 'down'}">${m.d > 0 ? '▲' : '▼'}</span>
+        <div><b>${m.m}</b><span>${m.v}/7 · ${plur(m.cnt, 'resposta', 'respostas')}</span></div>
+        <span class="mv-v ${m.d > 0 ? 'up' : 'down'}">${m.d > 0 ? '+' : ''}${m.d}</span></div>`).join('')}</div>` : ''}
+    </div>
+    <div class="panel"><div class="panel-h"><div><h3>Esforço por jornada</h3>
+      <p>Onde a tarefa custa caro, mesmo com a tela nova.</p></div></div>
+      ${hbars(ces.filter(j => j.v != null && j.cnt > 0).map(j => ({
+        n: j.n, v: j.v, label: j.v + '/7',
+        chg: cesP[j.k] != null ? (r1(j.v - cesP[j.k]) > 0 ? '+' : '') + r1(j.v - cesP[j.k]) : null,
+        chgCls: cesP[j.k] != null ? (j.v - cesP[j.k] > 0.05 ? 'up' : j.v - cesP[j.k] < -0.05 ? 'down' : 'flat') : '',
+        c: j.v < 4 ? 'var(--d-neg)' : j.v < 5.2 ? 'var(--d-warn)' : 'var(--d-pos)', sub: plur(j.cnt, 'resposta', 'respostas')
+      })), { max: 7 })}
+      <div class="panel-h" style="margin:24px 0 12px"><div><h3 style="font-size:14px">Atrito entre os dois layouts</h3>
+        <p>Criação de processos e Administrativo seguem no layout antigo. Média ${sc.admin} de 3.</p></div></div>
+      ${hbars(ADMIN_ATRITO.map(x => { const v = ativos.filter(r => r.admin === x.v).length;
+        return { n: x.n, v, label: String(v), c: x.v >= 2 ? 'var(--d-neg)' : x.v === 1 ? 'var(--d-warn)' : 'var(--d-pos)' }; }))}
+      <p style="font-size:12px;color:var(--d-ink-faint);margin-top:14px;line-height:1.5">${r1(ativos.filter(r => r.admin >= 2).length / (ativos.length || 1) * 100)}% sentem atrito ao alternar entre os dois layouts. Enquanto a criação de processos e o Administrativo não migrarem, esse número é um piso para o IRD.</p>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel"><div class="panel-h"><div><h3>Comentários da onda</h3>
+      <p>Motivo da nota, prioridade número um, o que era melhor na versão antiga.</p></div>
+      <div class="right"><button class="dk-btn ${S.aiLoading ? '' : 'pri'}" data-act="ai" ${S.aiLoading ? 'disabled' : ''}>
+        ${S.aiLoading ? '<span class="spin"></span> agrupando' : 'Agrupar temas com IA'}</button></div></div>
+      <div class="filters">${[['all', 'Todos'], ['rev', 'Voltaram'], ['risco', 'Risco de voltar'], ['det', 'Nota ≤6'], ['pro', 'Nota ≥9']]
+        .map(([k, n]) => `<button class="chip ${S.filt === k ? 'on' : ''}" data-act="filt:${k}">${n}</button>`).join('')}</div>
+      ${S.ai ? aiHTML() : ''}
+      <div class="cmts">${cmts.map(r => {
+        const isRev = r.status === 'voltou';
+        const band = isRev ? 'det' : notaBand(r.nota);
+        return `<div class="cmt ${band}">
+        <div class="cmt-h"><span class="sc">nota ${r.nota}</span>
+          <span class="pill ${band}">${isRev ? 'voltou ao legado' : notaLabel(r.nota)}</span>
+          ${!isRev && r.risco > 0 ? `<span class="pill neu">pensou em voltar</span>` : ''}
+          ${r.status === 'nao_sei' ? `<span class="pill neu">não sabe a versão</span>` : ''}
+          <span class="who">${esc(r.papel)} · ${esc(r.cliente.nome)}</span></div>
+        <p>${esc(isRev ? r.revPonto : r.notaWhy)}</p>
+        ${r.oneThing ? `<p style="margin-top:9px;color:var(--d-ink-soft)"><b style="color:var(--d-ink)">Mudaria:</b> ${esc(r.oneThing)}</p>` : ''}
+        ${r.legadoWorse ? `<p style="margin-top:5px;color:var(--d-ink-soft)"><b style="color:var(--d-warn)">Era melhor antes:</b> ${esc(r.legadoWorse)}</p>` : ''}
+        ${r.riscoWhy ? `<p style="margin-top:5px;color:var(--d-ink-soft)"><b style="color:var(--d-warn)">Pensou em voltar porque:</b> ${esc(r.riscoWhy)}</p>` : ''}
+        ${isRev ? `<p style="margin-top:5px;color:var(--d-ink-soft)"><b style="color:var(--d-pos)">Traria de volta:</b> ${esc(r.revTraria)}</p>` : ''}
+        <div class="cmt-tags">${classify([r.notaWhy, r.oneThing, r.legadoWorse, r.riscoWhy, r.revPonto].join(' ')).map(c => `<i>${c}</i>`).join('')}</div>
+      </div>`; }).join('')}</div>
+    </div>
+
+    <div class="panel"><div class="panel-h"><div><h3>Fila de entrevistas</h3>
+      <p>Até 10 por onda, ordenadas pelo dado: quem voltou ao legado primeiro, depois nota baixa, depois quem pensou em voltar.</p></div>
+      <div class="right"><span class="tag">${Math.min(fila.length, 10)}/10</span></div></div>
+      ${fila.length ? `<table class="q-table"><thead><tr><th>Pessoa</th><th>Nota</th><th>Por que ela</th></tr></thead><tbody>
+        ${fila.slice(0, 10).map(r => `<tr>
+          <td><div class="nm">${esc(r.nome || 'Anônimo')}</div><div class="sub">${esc(r.papel)}</div>
+            <div class="sub">${esc(r.cliente.nome)}</div></td>
+          <td><span class="pill ${r.status === 'voltou' ? 'det' : notaBand(r.nota)}">${r.nota}</span></td>
+          <td><div class="sub" style="margin:0">${r.status === 'voltou' ? 'Voltou ao legado após ' + esc(r.revUsou).toLowerCase()
+            : r.nota <= 6 ? 'Nota baixa' : r.risco > 0 ? 'Pensou em voltar' : 'Contraponto positivo'}</div></td>
+        </tr>`).join('')}</tbody></table>
+        <p style="font-size:12px;color:var(--d-ink-faint);margin-top:14px;line-height:1.5">Composição: ${plur(fila.filter(r => r.status === 'voltou').length, 'reversão', 'reversões')}, ${plur(fila.filter(r => r.status !== 'voltou' && r.nota <= 6).length, 'nota baixa', 'notas baixas')}, ${plur(fila.filter(r => r.status !== 'voltou' && r.nota >= 9).length, 'promotor', 'promotores')}. O promotor entra para dizer o que não mexer.</p>`
+        : '<div class="empty"><p>Ninguém aceitou conversar nesta onda ainda.</p></div>'}
+
+      <div class="panel-h" style="margin:24px 0 12px"><div><h3 style="font-size:14px">Temas mais citados</h3>
+        <p>Taxonomia fixa, comparável entre ondas.</p></div></div>
+      ${hbars(taxCur.slice(0, 7).map(([n, v]) => {
+        const p = taxPrev[n] ?? null, d = p == null ? null : v - p;
+        return { n, v, label: v + ' de ' + cur.length,
+          chg: d == null ? null : (d > 0 ? '+' : '') + d, chgCls: d > 0 ? 'down' : d < 0 ? 'up' : 'flat',
+          c: v / cur.length > .35 ? 'var(--d-neg)' : v / cur.length > .2 ? 'var(--d-warn)' : 'var(--d-primary)' };
+      }))}
+      ${sc.naoSabe ? `<p style="font-size:12px;color:var(--d-warn);margin-top:16px;line-height:1.5">${plur(sc.naoSabe, 'pessoa', 'pessoas')} não soube dizer em qual versão está. Um redesign que não é percebido é um dado sobre a comunicação da virada, não sobre a interface.</p>` : ''}
+    </div>
+  </div>`);
+}
+
+function aiHTML() {
+  if (S.ai.error) return `<div class="ai-out"><p style="font-size:13px;color:var(--d-neg)">${esc(S.ai.error)}</p></div>`;
+  return `<div class="ai-out"><div class="kpi-l" style="margin-bottom:6px">Temas agrupados por IA · ${S.ai.temas.length} grupos</div>
+    ${S.ai.temas.map(t => `<div class="ai-theme"><div class="th"><b>${esc(t.tema)}</b>
+      <span class="tag" style="color:${t.severidade === 'alta' ? 'var(--d-neg)' : t.severidade === 'média' ? 'var(--d-warn)' : 'var(--d-ink-faint)'}">${esc(t.severidade || '')}</span>
+      <span class="cnt">${t.frequencia} menções</span></div>
+      <p>${esc(t.resumo)}</p>${t.citacao ? `<q>${esc(t.citacao)}</q>` : ''}</div>`).join('')}</div>`;
+}
+
+async function runAI() {
+  S.aiLoading = true; S.ai = null; render();
+  const cur = byWave(S.waveSel);
+  const blob = cur.map((r, i) => `[${i + 1}] nota ${r.nota} · ${r.papel} · ${r.status === 'voltou' ? 'VOLTOU AO LEGADO' : 'usa o redesign'}
+${r.status === 'voltou' ? `motivo da volta: ${r.revPonto}\no que traria de volta: ${r.revTraria}`
+      : `motivo da nota: ${r.notaWhy}\nmudaria: ${r.oneThing}\nera melhor antes: ${r.legadoWorse || '—'}\nperde tempo: ${r.timeSink || '—'}`}`).join('\n\n');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000,
+        messages: [{ role: 'user', content: `Você analisa uma pesquisa sobre o REDESIGN de um sistema de gestão de processos e documentos usado por prefeituras e câmaras no Brasil. Os usuários migraram há pouco tempo e podem desativar o redesign e voltar ao layout anterior. Algumas telas (criação de processos e Administrativo) ainda não foram redesenhadas, então há atrito de conviver com dois layouts. Abaixo, ${cur.length} respostas da onda ${S.waveSel}.
+
+Agrupe em no máximo 6 temas por PROBLEMA REAL do redesign, não por palavra usada. Dê peso maior a quem voltou ao legado. Ordene por impacto na adoção. Responda APENAS com JSON válido, sem markdown e sem preâmbulo:
+{"temas":[{"tema":"nome curto em português","frequencia":número,"severidade":"alta"|"média"|"baixa","resumo":"uma ou duas frases sobre o que acontece e para quem","citacao":"trecho literal curto"}]}
+
+RESPOSTAS:
+${blob}` }] })
+    });
+    const data = await res.json();
+    const txt = data.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+    const cl = txt.replace(/```json|```/g, '').trim();
+    const p = JSON.parse(cl.slice(cl.indexOf('{'), cl.lastIndexOf('}') + 1));
+    S.ai = { temas: (p.temas || []).slice(0, 6) };
+  } catch { S.ai = { error: 'Não foi possível agrupar os temas agora. A taxonomia fixa continua valendo.' }; }
+  S.aiLoading = false; render();
+}
+
+/* ============================================================
+   10 · EVENTOS
+   ============================================================ */
+function render() {
+  if (S.loading) { el('app').innerHTML = `<div class="dark" style="display:grid;place-items:center;min-height:100vh"><span class="spin"></span></div>`; return; }
+  if (S.route === 'painel') { S.anim = false; return S.auth ? renderPainel() : renderLogin(); }
+  renderPesquisa(); S.anim = false;
+}
+const saveDraft = () => DB.set(DRAFT, { step: S.step, proto: S.proto, opened: S.opened, stamps: S.stamps, a: S.a }, false);
+async function next() {
+  if (S.step === 0 && !S.proto) { S.proto = codigo(); S.opened = hhmm(new Date()); }
+  if (!S.stamps[curKey()]) S.stamps[curKey()] = hhmm(new Date());
+  const f = flow();
+  if (f[S.step + 1] === 'recibo') await submitSurvey();
+  S.step = Math.min(f.length - 1, S.step + 1); S.anim = true;
+  saveDraft(); render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function okNow() {
+  const a = S.a, k = curKey();
+  if (k === 'nota') return a.nota !== null && (a.status === 'voltou' || a.notaWhy.trim().length >= 15);
+  if (k === 'rev_motivos') return a.revMotivos.length > 0 && a.revPonto.trim().length >= 15;
+  if (k === 'rev_volta') return a.revTraria.trim().length >= 15 && !!a.revRecomenda;
+  if (k === 'prioridade') return a.oneThing.trim().length >= 5;
+  if (k === 'risco') return a.risco !== null && (a.risco === 0 || a.riscoWhy.trim().length >= 15) && a.nps !== null;
+  if (k === 'perfil') return !!(a.papel && (a.papel !== 'Outro' || a.papelOutro.trim()) && a.tempo && a.freq);
+  if (k === 'encerrar') return a.talk !== null && (!a.talk || (a.nome.trim() && a.email.includes('@')));
+  return true;
+}
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'SELECT') return;
+  const [act, ...rest] = b.dataset.act.split(':'); const arg = rest.join(':');
+  const a = S.a;
+  if (act === 'next') return next();
+  if (act === 'back') { S.step = Math.max(0, S.step - 1); S.anim = true; saveDraft(); return render(); }
+  if (act === 'pick') { a.cliente = CLIENTES.find(c => c.id === arg) || null; S.query = ''; }
+  else if (act === 'unpick') { a.cliente = null; S.query = ''; }
+  else if (act === 'set') a[rest[0]] = rest.slice(1).join(':');
+  else if (act === 'tog') { const f = rest[0], v = rest.slice(1).join(':');
+    a[f] = a[f].includes(v) ? a[f].filter(x => x !== v) : [...a[f], v];
+    if (f === 'areas') Object.keys(a.sat).forEach(x => { if (!a.areas.includes(x)) delete a.sat[x]; });
+    if (f === 'jorn') Object.keys(a.ces).forEach(x => { if (!a.jorn.includes(x)) delete a.ces[x]; }); }
+  else if (act === 'status') { if (a.status !== arg) { a.status = arg; } }
+  else if (act === 'nota') a.nota = +arg;
+  else if (act === 'nps') a.nps = +arg;
+  else if (act === 'u1') a.u1 = +arg;
+  else if (act === 'u2') a.u2 = +arg;
+  else if (act === 'dim') { const [k, v] = arg.split(':'); a.legado[k] = +v; }
+  else if (act === 'ces') { const [k, v] = arg.split(':'); a.ces[k] = +v; }
+  else if (act === 'sat') { const i = arg.lastIndexOf(':'); a.sat[arg.slice(0, i)] = +arg.slice(i + 1); }
+  else if (act === 'admin') a.admin = +arg;
+  else if (act === 'risco') a.risco = +arg;
+  else if (act === 'talk') a.talk = arg === '1';
+  else if (act === 'restart') { S.step = 0; S.proto = null; S.stamps = {}; S.sent = false; S.query = '';
+    S.streak = Math.min(4, S.streak + 1); S.a = emptyA(); S.anim = true;
+    await DB.del(DRAFT, false); return render(); }
+  else if (act === 'login') { if ((el('pw')?.value || '') === 'produto2026') { S.auth = true; S.ai = null; await loadData(); return render(); }
+    el('lerr').innerHTML = '<div class="err">senha incorreta</div>'; return; }
+  else if (act === 'logout') { S.auth = false; location.hash = '#/pesquisa'; return render(); }
+  else if (act === 'filt') { S.filt = arg; return render(); }
+  else if (act === 'tipo') { S.tipoFilt = arg; S.ai = null; return render(); }
+  else if (act === 'ai') return runAI();
+  else if (act === 'clear') { const ks = await DB.keys(RK, true);
+    await Promise.all(ks.map(k => DB.del(k, true))); await DB.set(CFG, { seeded: true }, true);
+    S.data = []; S.ai = null; toast('Demonstração apagada. O painel agora só mostra respostas reais.'); return render(); }
+  else return;
+  saveDraft(); render();
+});
+document.addEventListener('input', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const [act, f] = b.dataset.act.split(':');
+  if (act === 'query') { S.query = b.value; render(); const i = el('cq');
+    if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } return; }
+  if (act !== 'txt') return;
+  S.a[f] = b.value;
+  const cc = b.parentElement.querySelector('.charc');
+  if (cc) cc.textContent = b.value.length + ' caracteres' + (cc.textContent.includes('mínimo') ? cc.textContent.slice(cc.textContent.indexOf(' · mínimo')) : '');
+  const btn = b.closest('.card')?.querySelector('.actions [data-act="next"].btn-pri');
+  if (btn) btn.disabled = !okNow();
+  saveDraft();
+});
+document.addEventListener('change', e => {
+  const b = e.target.closest('select[data-act]'); if (!b) return;
+  if (b.dataset.act === 'wave') { S.waveSel = b.value; S.ai = null; render(); }
+});
+document.addEventListener('keydown', e => {
+  if (S.route === 'painel') { if (e.key === 'Enter' && !S.auth) document.querySelector('[data-act="login"]')?.click(); return; }
+  if (isLast()) return;
+  if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'TEXTAREA') {
+    const btn = document.querySelector('.actions [data-act="next"].btn-pri');
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+  }
+  const k = curKey();
+  if ((k === 'nota' || k === 'risco') && /^[0-9]$/.test(e.key) && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+    if (k === 'nota') S.a.nota = +e.key; else S.a.nps = +e.key;
+    render();
+  }
+});
+
+/* ============================================================
+   11 · BOOT
+   ============================================================ */
+async function loadData() { S.data = (await DB.all(RK, true)).sort((a, b) => new Date(b.at) - new Date(a.at)); }
+(async function boot() {
+  S.route = readRoute();
+  const cfg = await DB.get(CFG, true), ex = await DB.keys(RK, true);
+  if (!cfg?.seeded && ex.length === 0) {
+    await Promise.all(buildSeed().map(r => DB.set(RK + r.id, r, true)));
+    await DB.set(CFG, { seeded: true }, true);
+  }
+  const d = await DB.get(DRAFT, false);
+  if (d && d.a) { S.step = d.step || 0; S.proto = d.proto; S.opened = d.opened; S.stamps = d.stamps || {}; S.a = { ...emptyA(), ...d.a }; }
+  await loadData(); S.loading = false; render();
+})();
+</script>
+
+</html>
