@@ -376,6 +376,7 @@ svg text{font-family:var(--mono)}
 </style>
 
 <div class="app" id="app"></div>
+<script src="config.js"></script>
 <script>
 /* ============================================================
    CARGA DE CLIENTES COM O REDESIGN ATIVO
@@ -671,22 +672,194 @@ const CLIENTES = CLIENTES_RAW.split('\n').map(l => {
 const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 /* ============================================================
    1 · PERSISTÊNCIA
+   Três camadas, nesta ordem: Supabase → storage do runtime → memória.
+   Sem credencial o app continua de pé e a barra de aviso aparece.
+   REST puro via fetch, sem supabase-js: o protótipo segue sendo um
+   arquivo só, sem dependência externa.
+
+   O contrato é o de sempre — get, set, del, keys, all — e as chaves de
+   dados do registro não mudam. O mapeamento para as colunas do banco
+   acontece aqui dentro, em toRow/fromRow, e em nenhum outro lugar.
    ============================================================ */
-const HAS_STORE = typeof window !== 'undefined' && !!window.storage;
+const SB_URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
+const SB_KEY = window.SUPABASE_ANON_KEY || '';
+const HAS_SB = !!(SB_URL && SB_KEY);
+const HAS_STORE = !HAS_SB && typeof window !== 'undefined' && !!window.storage;
 const MEM = new Map();
+const RK = 'irdresp:', CFG = 'irdcfg', DRAFT = 'irddraft';
+
+/* Sessão do painel. Enquanto token é null a requisição vale como anônima e a
+   RLS não devolve linha nenhuma — é ela que barra a leitura, não a interface. */
+const SB = {
+  token: null,
+  async req(path, opt = {}) {
+    const h = { apikey: SB_KEY, 'Content-Type': 'application/json', ...(opt.headers || {}) };
+    if (SB.token) h.Authorization = 'Bearer ' + SB.token;
+    try { return await fetch(SB_URL + path, { ...opt, headers: h }); }
+    catch { return { ok: false, status: 0, json: async () => null }; }
+  }
+};
+
+/* Rascunho e configuração local nunca vão ao banco. */
+const LS = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem(k); return true; } catch { return false; } },
+  keys(pfx) { try { return Object.keys(localStorage).filter(k => k.startsWith(pfx)); } catch { return []; } }
+};
+
+const toRow = r => ({
+  codigo: r.id, wave: r.wave, criado_em: r.at,
+  cliente_id: r.cliente?.id || '', cliente_nome: r.cliente?.nome || '', tipo_org: r.tipo || 'Outro',
+  papel: r.papel || null, tempo: r.tempo || null, freq: r.freq || null, status: r.status,
+  jorn: r.jorn || [], areas: r.areas || [],
+  nota: r.nota ?? null, nota_why: r.notaWhy || null, u1: r.u1 ?? null, u2: r.u2 ?? null,
+  legado: r.legado || {}, legado_worse: r.legadoWorse || null,
+  ces: r.ces || {}, sat: r.sat || {},
+  atend: r.atend || {}, atend_papel: r.atendPapel || null, atend_why: r.atendWhy || null,
+  admin: r.admin ?? null, admin_why: r.adminWhy || null,
+  risco: r.risco ?? null, risco_why: r.riscoWhy || null,
+  one_thing: r.oneThing || null, time_sink: r.timeSink || null,
+  rev_usou: r.revUsou || null, rev_quando: r.revQuando || null, rev_motivos: r.revMotivos || [],
+  rev_ponto: r.revPonto || null, rev_traria: r.revTraria || null, rev_recomenda: r.revRecomenda || null,
+  talk: !!r.talk, seed: !!r.seed
+});
+
+const fromRow = x => ({
+  id: x.codigo, wave: x.wave, at: x.criado_em,
+  cliente: { id: x.cliente_id, nome: x.cliente_nome, tipo: x.tipo_org },
+  tipo: x.tipo_org, papel: x.papel || '', tempo: x.tempo || '', freq: x.freq || '', status: x.status,
+  jorn: x.jorn || [], areas: x.areas || [],
+  nota: x.nota, notaWhy: x.nota_why || '', u1: x.u1, u2: x.u2,
+  legado: x.legado || {}, legadoWorse: x.legado_worse || '',
+  ces: x.ces || {}, sat: x.sat || {},
+  atend: x.atend || {}, atendPapel: x.atend_papel || '', atendWhy: x.atend_why || '',
+  admin: x.admin, adminWhy: x.admin_why || '',
+  risco: x.risco, riscoWhy: x.risco_why || '',
+  oneThing: x.one_thing || '', timeSink: x.time_sink || '',
+  revUsou: x.rev_usou || '', revQuando: x.rev_quando || '', revMotivos: x.rev_motivos || [],
+  revPonto: x.rev_ponto || '', revTraria: x.rev_traria || '', revRecomenda: x.rev_recomenda || '',
+  talk: !!x.talk, nome: '', email: '', seed: !!x.seed
+});
+
+const isResp = k => k.startsWith(RK);
+const codOf = k => k.slice(RK.length);
+
 const DB = {
-  async get(k, sh = true) { if (!HAS_STORE) return MEM.has(k) ? MEM.get(k) : null;
+  async get(k, sh = true) {
+    if (HAS_SB) {
+      if (!isResp(k)) return LS.get(k);
+      const r = await SB.req('/rest/v1/respostas?select=*&codigo=eq.' + encodeURIComponent(codOf(k)));
+      if (!r.ok) return null;
+      const j = await r.json(); return j && j[0] ? fromRow(j[0]) : null;
+    }
+    if (!HAS_STORE) return MEM.has(k) ? MEM.get(k) : null;
     try { const r = await window.storage.get(k, sh); return r ? JSON.parse(r.value) : null; } catch { return null; } },
-  async set(k, v, sh = true) { if (!HAS_STORE) { MEM.set(k, v); return true; }
+
+  /* true, false, ou 'dup' quando o código de acompanhamento já existe */
+  async set(k, v, sh = true) {
+    if (HAS_SB) {
+      if (!isResp(k)) return LS.set(k, v);
+      const r = await SB.req('/rest/v1/respostas', { method: 'POST', body: JSON.stringify(toRow(v)) });
+      if (r.status === 409) return 'dup';
+      if (!r.ok) return false;
+      /* identidade em tabela separada, ligada só pelo código de acompanhamento */
+      if ((v.nome || '').trim() || (v.email || '').trim())
+        await SB.req('/rest/v1/contatos', { method: 'POST',
+          body: JSON.stringify({ codigo: v.id, nome: v.nome || null, email: v.email || null }) });
+      return true;
+    }
+    if (!HAS_STORE) { MEM.set(k, v); return true; }
     try { return !!(await window.storage.set(k, JSON.stringify(v), sh)); } catch { return false; } },
-  async del(k, sh = true) { if (!HAS_STORE) { MEM.delete(k); return true; }
+
+  async del(k, sh = true) {
+    if (HAS_SB) {
+      if (!isResp(k)) return LS.del(k);
+      const r = await SB.req('/rest/v1/respostas?codigo=eq.' + encodeURIComponent(codOf(k)), { method: 'DELETE' });
+      return r.ok;
+    }
+    if (!HAS_STORE) { MEM.delete(k); return true; }
     try { await window.storage.delete(k, sh); return true; } catch { return false; } },
-  async keys(pfx, sh = true) { if (!HAS_STORE) return [...MEM.keys()].filter(k => k.startsWith(pfx));
+
+  async keys(pfx, sh = true) {
+    if (HAS_SB) {
+      if (!isResp(pfx)) return LS.keys(pfx);
+      const r = await SB.req('/rest/v1/respostas?select=codigo');
+      if (!r.ok) return [];
+      return ((await r.json()) || []).map(x => RK + x.codigo);
+    }
+    if (!HAS_STORE) return [...MEM.keys()].filter(k => k.startsWith(pfx));
     try { const r = await window.storage.list(pfx, sh); return r?.keys || []; } catch { return []; } },
-  async all(pfx, sh = true) { const ks = await DB.keys(pfx, sh);
+
+  /* uma requisição só, em vez de uma por chave */
+  async all(pfx, sh = true) {
+    if (HAS_SB) {
+      if (!isResp(pfx)) return [];
+      const r = await SB.req('/rest/v1/respostas?select=*&order=criado_em.desc');
+      if (!r.ok) return [];
+      return ((await r.json()) || []).map(fromRow);
+    }
+    const ks = await DB.keys(pfx, sh);
     return (await Promise.all(ks.map(k => DB.get(k, sh)))).filter(Boolean); }
 };
-const RK = 'irdresp:', CFG = 'irdcfg', DRAFT = 'irddraft';
+/* ============================================================
+   1b · SESSÃO DO PAINEL (Supabase Auth)
+   Sem cadastro aberto: as contas da equipe de produto são criadas por
+   convite no painel do Supabase. Aqui só se troca e-mail e senha por um
+   token, e é o token que a RLS exige para devolver qualquer linha.
+   ============================================================ */
+const SESS = 'irdsess';
+
+const AUTH = {
+  /* restaura a sessão salva; renova quando o access_token já venceu */
+  async restore() {
+    if (!HAS_SB) return false;
+    const t = LS.get(SESS);
+    if (!t?.refresh_token) return false;
+    if (t.expires_at && t.expires_at - 60 > Math.floor(Date.now() / 1000)) {
+      SB.token = t.access_token; return true;
+    }
+    return await AUTH.refresh(t.refresh_token);
+  },
+
+  async refresh(rt) {
+    const r = await SB.req('/auth/v1/token?grant_type=refresh_token',
+      { method: 'POST', body: JSON.stringify({ refresh_token: rt }) });
+    if (!r.ok) { LS.del(SESS); SB.token = null; return false; }
+    return AUTH.keep(await r.json());
+  },
+
+  async login(email, senha) {
+    if (!HAS_SB) return { erro: 'Sem conexão com o banco. O painel precisa de credencial configurada.' };
+    const r = await SB.req('/auth/v1/token?grant_type=password',
+      { method: 'POST', body: JSON.stringify({ email, password: senha }) });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j?.access_token) {
+      const m = (j?.error_description || j?.msg || '').toLowerCase();
+      if (m.includes('email not confirmed')) return { erro: 'Este e-mail ainda não foi confirmado. Abra o link do convite antes de entrar.' };
+      return { erro: 'E-mail ou senha não conferem.' };
+    }
+    AUTH.keep(j);
+    return { ok: true };
+  },
+
+  keep(j) {
+    if (!j?.access_token) return false;
+    SB.token = j.access_token;
+    LS.set(SESS, { access_token: j.access_token, refresh_token: j.refresh_token,
+      expires_at: j.expires_at || (Math.floor(Date.now() / 1000) + (j.expires_in || 3600)),
+      email: j.user?.email || '' });
+    return true;
+  },
+
+  email() { return LS.get(SESS)?.email || ''; },
+
+  async logout() {
+    if (SB.token) await SB.req('/auth/v1/logout', { method: 'POST' });
+    SB.token = null; LS.del(SESS);
+  }
+};
+
 
 /* ============================================================
    2 · MODELO
@@ -1162,16 +1335,22 @@ async function submitSurvey() {
     revPonto: a.revPonto.trim(), revTraria: a.revTraria.trim(), revRecomenda: a.revRecomenda,
     talk: !!a.talk, nome: a.nome.trim(), email: a.email.trim(), seed: false
   };
-  const ok = await DB.set(RK + S.proto, rec, true);
+  /* codigo() sorteia 4 digitos: com o volume de uma onda a colisao e esperada,
+     e com codigo como primary key ela custaria a resposta inteira. Reemite e tenta de novo. */
+  let ok = await DB.set(RK + S.proto, rec, true), tentativas = 0;
+  while (ok === 'dup' && tentativas++ < 8) {
+    S.proto = codigo(); rec.id = S.proto;
+    ok = await DB.set(RK + S.proto, rec, true);
+  }
   S.sent = true; await DB.del(DRAFT, false);
-  if (!ok && HAS_STORE) toast('Não conseguimos gravar agora. Tente novamente em instantes.');
+  if (ok !== true && (HAS_SB || HAS_STORE)) toast('Não conseguimos gravar agora. Tente novamente em instantes.');
 }
 
 function renderPesquisa() {
   const f = flow(), total = S.a.status ? f.length : 14;
   const pct = Math.min(100, (S.step / (total - 1)) * 100);
   el('app').innerHTML = `<div class="pub">
-    ${!HAS_STORE ? `<div class="warn-bar">Armazenamento não disponível neste contexto — as respostas ficam apenas nesta aba, para demonstração.</div>` : ''}
+    ${!HAS_SB && !HAS_STORE ? `<div class="warn-bar">Armazenamento não disponível neste contexto — as respostas ficam apenas nesta aba, para demonstração.</div>` : ''}
     <div class="pub-top"><div class="pub-top-in">
       <div class="brand"><span class="brand-mark">1D</span>1Doc<span class="brand-sub">Pesquisa do redesign</span></div>
       <div class="top-right">
@@ -1494,14 +1673,15 @@ function renderLogin() {
   el('app').innerHTML = `<div class="dark"><div class="login-wrap"><div class="login">
     <div class="brand"><span class="brand-mark">1D</span>1Doc<span class="brand-sub">Painel do redesign</span></div>
     <h2>Entrar no painel da equipe</h2>
-    <p>Índice do redesign, comparação com a versão anterior, quem voltou para o legado e por quê.</p>
+    <p>Índice do redesign, comparação com a versão anterior, quem voltou para o layout antigo e por quê.</p>
+    <input class="dk-inp" id="em" type="email" placeholder="e-mail" autocomplete="username" style="margin-bottom:10px">
     <input class="dk-inp" id="pw" type="password" placeholder="senha" autocomplete="current-password">
     <div id="lerr"></div>
     <button class="dk-btn pri" style="width:100%;margin-top:14px;padding:11px" data-act="login">Entrar</button>
-    <p class="hint">Senha de demonstração: <b class="mono">produto2026</b>. Esta checagem roda no navegador e serve para o protótipo — no sistema real o login precisa ser feito no servidor.</p>
+    <p class="hint">Acesso restrito à equipe de produto. As contas são criadas por convite — não há cadastro nesta tela. Se você não recebeu convite, fale com quem cuida da pesquisa.</p>
     <p class="hint" style="border:none;padding-top:8px"><a href="#/pesquisa" style="color:var(--d-primary);text-decoration:none">← Voltar para a pesquisa</a></p>
   </div></div></div>`;
-  setTimeout(() => el('pw')?.focus(), 60);
+  setTimeout(() => el('em')?.focus(), 60);
 }
 
 function shell(inner) {
@@ -1801,9 +1981,15 @@ document.addEventListener('click', async e => {
   else if (act === 'restart') { S.step = 0; S.proto = null; S.stamps = {}; S.sent = false; S.query = '';
     S.streak = Math.min(4, S.streak + 1); S.a = emptyA(); S.anim = true;
     await DB.del(DRAFT, false); return render(); }
-  else if (act === 'login') { if ((el('pw')?.value || '') === 'produto2026') { S.auth = true; S.ai = null; await loadData(); return render(); }
-    el('lerr').innerHTML = '<div class="err">senha incorreta</div>'; return; }
-  else if (act === 'logout') { S.auth = false; location.hash = '#/pesquisa'; return render(); }
+  else if (act === 'login') {
+    const em = (el('em')?.value || '').trim(), pw = el('pw')?.value || '';
+    if (!em || !pw) { el('lerr').innerHTML = '<div class="err">preencha e-mail e senha</div>'; return; }
+    el('lerr').innerHTML = '<div class="hint" style="border:none;padding:8px 0">entrando…</div>';
+    const r = await AUTH.login(em, pw);
+    if (!r.ok) { el('lerr').innerHTML = `<div class="err">${esc(r.erro)}</div>`; return; }
+    S.auth = true; S.ai = null; await loadData(); return render(); }
+  else if (act === 'logout') { await AUTH.logout(); S.auth = false; S.data = []; S.ai = null;
+    location.hash = '#/pesquisa'; return render(); }
   else if (act === 'filt') { S.filt = arg; return render(); }
   else if (act === 'tipo') { S.tipoFilt = arg; S.ai = null; return render(); }
   else if (act === 'ai') return runAI();
@@ -1851,10 +2037,14 @@ async function loadData() { S.data = (await DB.all(RK, true)).sort((a, b) => new
 (async function boot() {
   S.route = readRoute();
   const cfg = await DB.get(CFG, true), ex = await DB.keys(RK, true);
-  if (!cfg?.seeded && ex.length === 0) {
+  /* Com banco real nao se semeia do cliente: a RLS esconde as linhas do anonimo,
+     entao ex.length seria sempre 0 e cada visitante inseriria a demonstracao de novo. */
+  if (!HAS_SB && !cfg?.seeded && ex.length === 0) {
     await Promise.all(buildSeed().map(r => DB.set(RK + r.id, r, true)));
     await DB.set(CFG, { seeded: true }, true);
   }
+  /* sessão do painel sobrevive a recarregar a aba */
+  S.auth = await AUTH.restore();
   const d = await DB.get(DRAFT, false);
   if (d && d.a) { S.step = d.step || 0; S.proto = d.proto; S.opened = d.opened; S.stamps = d.stamps || {}; S.a = { ...emptyA(), ...d.a }; }
   await loadData(); S.loading = false; render();

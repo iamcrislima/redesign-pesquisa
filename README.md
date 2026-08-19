@@ -19,11 +19,16 @@ Os clientes migraram para o redesign há pouco tempo e **podem desativar e volta
 ## Como rodar
 
 ```bash
+cp prototipo/config.example.js prototipo/config.js   # preencha URL e chave publicável
 python3 -m http.server 8000 --directory prototipo
 # http://localhost:8000
 ```
 
-Fora do runtime de artifacts o adaptador de storage cai para memória: **as respostas somem ao recarregar.** É suficiente para demonstrar, não para coletar. A troca é a fase 1 do plano.
+O schema fica em `supabase/schema.sql` — rode o arquivo **inteiro** no SQL Editor do Supabase. Tabela e RLS estão na mesma transação de propósito: uma tabela criada sem política fica legível por qualquer anônimo até a segunda metade rodar.
+
+Sem `config.js` o adaptador cai para memória e a barra de aviso aparece: **as respostas somem ao recarregar.** Serve para demonstrar, não para coletar.
+
+O painel exige sessão. As contas da equipe são criadas por convite em Authentication → Users no painel do Supabase; não há cadastro na tela de login.
 
 ## Documentação
 
@@ -44,6 +49,6 @@ Fora do composto, sempre ao lado: taxa de reversão, tempo até reverter, risco 
 
 ## Antes de coletar dado real
 
-1. Autenticação do painel no servidor — no protótipo a senha é checada no navegador.
-2. Chave da API da Anthropic atrás de endpoint próprio — nunca no bundle do cliente.
-3. Nome e e-mail em tabela separada das respostas.
+1. ~~Autenticação do painel no servidor~~ — **resolvido.** Supabase Auth, sem cadastro aberto. A leitura de respostas é barrada por RLS, não por checagem de interface: adulterar o JavaScript no navegador não devolve nenhuma linha.
+2. **Pendente.** Chave da API da Anthropic atrás de endpoint próprio — nunca no bundle do cliente. É a fase 5.
+3. ~~Nome e e-mail em tabela separada das respostas~~ — **resolvido.** Tabela `contatos`, ligada só pelo código de acompanhamento, sem leitura para anônimo.

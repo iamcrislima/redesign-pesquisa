@@ -10,3 +10,6 @@ Thumbs.db
 .vercel
 .idea/
 .vscode/
+
+# credenciais locais do Supabase — nunca commitar
+prototipo/config.js
