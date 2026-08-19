@@ -833,9 +833,13 @@ const BLOCOS_DEF = [
   { n: 'No dia a dia', keys: ['ces', 'areas', 'risco', 'prioridade'] },
   { n: 'Encerramento', keys: ['encerrar', 'recibo'] }
 ];
-/* só os blocos que existem no caminho atual — quem voltou ao legado não passa por todos */
-const blocosDoFluxo = () => { const f = flow();
-  return BLOCOS_DEF.map(b => ({ ...b, mine: b.keys.filter(k => f.includes(k)) })).filter(b => b.mine.length); };
+/* só os blocos que existem no caminho atual — quem voltou ao legado não passa por todos.
+   Antes de o status ser escolhido presume o caminho principal: senão a trilha abriria
+   com 2 etapas e saltaria para 5, e o contador de telas já presume 14 pelo mesmo motivo. */
+const blocosDoFluxo = () => {
+  const f = S.a.status ? flow() : [...FLOW_BASE, ...FLOW_USA];
+  return BLOCOS_DEF.map(b => ({ ...b, mine: b.keys.filter(k => f.includes(k)) })).filter(b => b.mine.length);
+};
 const curKey = () => flow()[S.step] || 'recibo';
 const isLast = () => curKey() === 'recibo';
 
